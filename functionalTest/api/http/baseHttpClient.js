@@ -20,6 +20,8 @@ function create (protocol) {
         var deferred = Q.defer(),
             options = optionsFor(spec);
 
+        console.log(options);
+
         if (!options.port) {
             throw Error('silly rabbit, you forgot to pass the port again');
         }
