@@ -6,11 +6,11 @@ var mountebank = require('../src/mountebank'),
     fs = require('fs'),
     path = require('path'),
     http = require('http'),
-    exec = require('child_process').exec,
     thisPackage = require('../package.json'),
     Q = require('q'),
-    os = require('os'),
-    ejs = require('ejs');
+    ejs = require('ejs'),
+    isWindows = require('os').platform().indexOf('win') === 0,
+    killWait = isWindows ? 1000 : 0;
 
 function usage () {
     console.log('Usage: mb [command] [options...]');
@@ -22,40 +22,50 @@ function usage () {
     console.log('    --logfile FILE    file used for all log (default mb.log)');
     console.log('    --loglevel LEVEL  level for terminal logs (default info)');
     console.log('    --allowInjection  set to allow JavaScript injection');
-    console.log('    --nomock          do not remember requests for mock verification and stub debugging');
-    console.log('    --keyfile         file to read for https key (defaults to internal key)');
-    console.log('    --certfile        file to read for https cert (defaults to self-signed cert)');
+    console.log('    --mock            remember requests for mock verification');
     console.log('    --version         show the mountebank version and exit');
     console.log('    --allowCORS       allow Cross-Origin Site Requests to mountebank server');
+    console.log('    --debug           include stub match information in imposter retrievals for debugging purposes');
 }
 
 function error (message) {
-    console.log(message + "\n");
+    console.error(message + '\n');
     usage();
     process.exit(1);
 }
 
-function isWindows () {
-    return os.platform().indexOf('win') === 0;
+function processExists(pid) {
+    try {
+        // "As a special case, signal 0 can be used to test existence of process"
+        // https://nodejs.org/api/process.html#process_process_kill_pid_signal
+        process.kill(pid, 0);
+        return true;
+    }
+    catch (e) {
+        return false;
+    }
 }
 
-function getStopCommand (pid) {
-    if (isWindows()) {
-        return 'taskkill /F /PID ' + pid;
-    }
-    else {
-        return 'kill ' + pid;
-    }
-}
+function serverAt (options) {
 
-var serverAt = function (options) {
+    function willKill () {
+        if (!fs.existsSync(options.pidfile)) {
+            return false;
+        }
+
+        var pid = fs.readFileSync(options.pidfile);
+        return processExists(pid);
+    }
+
     return {
         start: function () {
             var server = mountebank.create(options);
 
             fs.writeFileSync(options.pidfile, process.pid.toString());
             var shutdown = function shutdown () {
-                fs.unlinkSync(options.pidfile);
+                if (fs.existsSync(options.pidfile)) {
+                    fs.unlinkSync(options.pidfile);
+                }
                 server.close();
                 process.exit();
             };
@@ -65,33 +75,28 @@ var serverAt = function (options) {
 
         stop: function () {
             if (!fs.existsSync(options.pidfile)) {
-                return false;
+                return;
             }
 
-            var pid = fs.readFileSync(options.pidfile),
-                command = getStopCommand(pid);
+            var pid = fs.readFileSync(options.pidfile);
 
-            exec(command, function (error, stdout, stderr) {
-                console.log(stdout);
-                if (error) {
-                    console.log(stderr);
-                }
-            });
-            return true;
+            if (processExists(pid)) {
+                process.kill(pid);
+            }
+            else {
+                fs.unlinkSync(options.pidfile);
+            }
         },
 
         restart: function () {
-            var stopped = this.stop();
-            if (stopped && isWindows()) {
-                // Need a delay or get an address in use error
-                setTimeout(this.start, 1000);
-            }
-            else {
-                this.start();
-            }
+            var timeToWait = willKill() ? killWait : 0;
+            this.stop();
+
+            // Need a delay or get an address in use error
+            setTimeout(this.start, timeToWait);
         }
     };
-};
+}
 
 function shouldLoadConfigFile (commandLine) {
     return commandLine.options.configfile !== '' && commandLine.command.indexOf('start') >= 0;
@@ -104,7 +109,10 @@ function putConfig (options, body) {
             path: '/imposters',
             port: options.port,
             hostname: 'localhost',
-            headers: { 'Content-Type': 'application/json' }
+            headers: {
+                'Content-Type': 'application/json',
+                Connection: 'close'
+            }
         },
         request = http.request(requestOptions, function (response) {
             response.body = '';
@@ -160,7 +168,7 @@ try {
             keyfile: '',
             certfile: ''
         },
-        booleanOptions = ['allowInjection', 'nomock', 'heroku', 'version', 'allowCORS'],
+        booleanOptions = ['allowInjection', 'mock', 'heroku', 'version', 'allowCORS', 'debug'],
         commandLine = cli.parse(process.argv.slice(2), defaultOptions, booleanOptions),
         server = serverAt(commandLine.options);
 
@@ -169,21 +177,21 @@ try {
     }
     else {
         switch (commandLine.command) {
-        case 'start':
-            server.start();
-            break;
-        case 'stop':
-            server.stop();
-            break;
-        case 'restart':
-            server.restart();
-            break;
-        case 'help':
-            usage();
-            break;
-        default:
-            error("Invalid command '" + commandLine.command + "'.");
-            break;
+            case 'start':
+                server.start();
+                break;
+            case 'stop':
+                server.stop();
+                break;
+            case 'restart':
+                server.restart();
+                break;
+            case 'help':
+                usage();
+                break;
+            default:
+                error("Invalid command '" + commandLine.command + "'.");
+                break;
         }
 
         if (shouldLoadConfigFile(commandLine)) {

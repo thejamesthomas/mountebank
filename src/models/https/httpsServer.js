@@ -2,25 +2,35 @@
 
 var fs = require('fs'),
     https = require('https'),
-    helpers = require('../../util/helpers'),
-    baseHttpServer = require('../http/baseHttpServer');
+    baseHttpServer = require('../http/baseHttpServer'),
+    defaultKey = fs.readFileSync(__dirname + '/cert/mb-key.pem', 'utf8'),
+    defaultCert = fs.readFileSync(__dirname + '/cert/mb-cert.pem', 'utf8');
 
-function initialize (allowInjection, recordRequests, keyfile, certfile) {
-    var cert = {
-            key: fs.readFileSync(keyfile || __dirname + '/cert/server.key'),
-            cert: fs.readFileSync(certfile || __dirname + '/cert/server.crt'),
-            ca: fs.readFileSync(certfile || __dirname + '/cert/ca.crt'),
-            requestCert: true,
-            rejectUnauthorized: false
-        },
-        createServer = function (options) {
-            var imposterCert = helpers.clone(cert);
-            if (options.requestClientCert) {
-                imposterCert.requestCert = true;
-            }
-            return https.createServer(imposterCert);
+function initialize (allowInjection, recordRequests, debug) {
+    var createBaseServer = function (options) {
+            var metadata = {
+                    key: options.key || defaultKey,
+                    cert: options.cert || defaultCert,
+                    mutualAuth: !!options.mutualAuth
+                },
+                createNodeServer = function () {
+                    // client certs will not reject the request.  It does set the request.client.authorized variable
+                    // to false for all self-signed certs; use rejectUnauthorized: true and a ca: field set to an array
+                    // containing the client cert to see request.client.authorized = true
+                    return https.createServer({
+                        key: metadata.key,
+                        cert: metadata.cert,
+                        requestCert: metadata.mutualAuth,
+                        rejectUnauthorized: false
+                    });
+                };
+
+            return {
+                metadata: function () { return metadata; },
+                createNodeServer: createNodeServer
+            };
         };
-    return baseHttpServer.setup('https', createServer).initialize(allowInjection, recordRequests);
+    return baseHttpServer.setup('https', createBaseServer).initialize(allowInjection, recordRequests, debug);
 }
 
 module.exports = {

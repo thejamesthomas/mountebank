@@ -22,13 +22,12 @@ function create (options) {
     var app = express(),
         imposters = {},
         protocols = {
-            tcp: require('./models/tcp/tcpServer').initialize(options.allowInjection, !options.nomock),
-            http: require('./models/http/httpServer').initialize(options.allowInjection, !options.nomock),
-            https: require('./models/https/httpsServer').initialize(options.allowInjection, !options.nomock,
-                                                                      options.keyfile, options.certfile),
-            soap: require('./models/soap/soapServer').initialize(options.allowInjection, !options.nomock),
-            smtp: require('./models/smtp/smtpServer').initialize(!options.nomock),
-            foo: require('./models/foo/fooServer').initialize(options.allowInjection, !options.nomock)
+            tcp: require('./models/tcp/tcpServer').initialize(options.allowInjection, options.mock, options.debug),
+            http: require('./models/http/httpServer').initialize(options.allowInjection, options.mock, options.debug),
+            https: require('./models/https/httpsServer').initialize(options.allowInjection, options.mock, options.debug),
+            soap: require('./models/soap/soapServer').initialize(options.allowInjection, options.mock, options.debug),
+            smtp: require('./models/smtp/smtpServer').initialize(options.mock, options.debug),
+            foo: require('./models/foo/fooServer').initialize(options.allowInjection, options.mock, options.debug)
         },
         logger = ScopedLogger.create(winston, util.format('[mb:%s] ', options.port)),
         homeController = HomeController.create(releases),
@@ -36,10 +35,10 @@ function create (options) {
         imposterController = ImposterController.create(imposters),
         logsController = LogsController.create(options.logfile),
         configController = ConfigController.create(thisPackage.version, options),
-        feedController = FeedController.create(thisPackage.version, releases, options),
+        feedController = FeedController.create(releases, options),
         validateImposterExists = middleware.createImposterValidator(imposters),
-        welcome = util.format('mountebank v%s now taking orders - point your browser to http://localhost:%s for help',
-            thisPackage.version, options.port);
+        welcome = util.format('mountebank v%s (node %s) now taking orders - point your browser to http://localhost:%s for help',
+            thisPackage.version, process.version, options.port);
 
     logger.remove(logger.transports.Console);
     if (process.stdout.isTTY) {
@@ -115,7 +114,7 @@ function create (options) {
         '/docs/protocols/smtp'
     ].forEach(function (endpoint) {
         app.get(endpoint, function (request, response) {
-            response.render(endpoint.substring(1), { version: thisPackage.version });
+            response.render(endpoint.substring(1));
         });
     });
 

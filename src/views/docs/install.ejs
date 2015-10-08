@@ -8,15 +8,15 @@ description = 'Installation options for mountebank, many of which require no pla
 <h1>Installation Options</h1>
 
 <p>mountebank knows first-hand how frustrating it is to be working in .NET and have to
-  fiddle with a JDK just to get a testing library working, and the hassle of setting up
-  ruby in your build pipeline to compile CSS even though you're on a Java project.  mountebank
-  wants you to be happy, and therefore he has experimental support for additional installation
-  options, with more coming soon.</p>
+fiddle with a JDK just to get a testing library working, and the hassle of setting up
+ruby in your build pipeline to compile CSS even though you're on a Java project.  mountebank
+wants you to be happy, and therefore he supports additional installation
+options.</p>
 
-<p>If you use the npm installer on Windows, make sure to use the <code>--production</code> flag,
-  as some test dependencies fail to install on that platform without some prerequisites.</p>
-
-<% var versionWithoutPatch = version.replace(/\.\d+$/, '') %>
+<%
+var versionWithoutPatch = version.replace(/\.\d+(\+\d+)?$/,'');
+var versionPath = encodeURIComponent(version);
+%>
 
 <table>
   <tr>
@@ -32,11 +32,11 @@ description = 'Installation options for mountebank, many of which require no pla
     <td>No</td>
     <td style="min-width: 5em;">
       <ul>
-        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank-v<%= version %>-darwin-x64.tar.gz">osx</a></li>
-        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank-v<%= version %>-linux-x86.tar.gz">linux x86</a></li>
-        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank-v<%= version %>-linux-x64.tar.gz">linux x64</a></li>
-        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank-v<%= version %>-win-x86.zip">win x86</a></li>
-        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank-v<%= version %>-win-x64.zip">win x64</a></li>
+        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank-v<%= versionPath %>-darwin-x64.tar.gz">osx</a></li>
+        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank-v<%= versionPath %>-linux-x86.tar.gz">linux x86</a></li>
+        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank-v<%= versionPath %>-linux-x64.tar.gz">linux x64</a></li>
+        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank-v<%= versionPath %>-win-x86.zip">win x86</a></li>
+        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank-v<%= versionPath %>-win-x64.zip">win x64</a></li>
       </ul>
     </td>
     <td>Simply unpack and run <code>mb</code> from inside</td>
@@ -47,20 +47,20 @@ description = 'Installation options for mountebank, many of which require no pla
     <td>Yes</td>
     <td>
       <ul>
-        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank-v<%= version %>.pkg">pkg</a></li>
-        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank-<%= version %>-1.x86_64.rpm">rpm</a></li>
-        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank_<%= version %>_amd64.deb">deb</a></li>
+        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank-v<%= versionPath %>.pkg">pkg</a></li>
+        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank-<%= versionPath %>-1.x86_64.rpm">rpm</a></li>
+        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank_<%= versionPath %>_amd64.deb">deb</a></li>
       </ul>
     </td>
     <td>Puts <code>mb</code> at <code>/usr/local/bin</code>, which is generally in the <code>PATH</code>.</td>
   </tr>
   <tr>
     <td>source tarball</td>
-    <td>Yes (v0.10)</td>
+    <td>Yes</td>
     <td>No</td>
     <td>
       <ul>
-        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank-v<%= version %>-npm.tar.gz">mb</a></li>
+        <li><a href="https://s3.amazonaws.com/mountebank/v<%= versionWithoutPatch %>/mountebank-v<%= versionPath %>-npm.tar.gz">mb</a></li>
       </ul>
     </td>
     <td>source tarball if you roll that way.</td>

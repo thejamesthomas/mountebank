@@ -13,7 +13,7 @@ var AbstractServer = require('../abstractServer'),
     events = require('events'),
     HttpRequest = require('./httpRequest');
 
-function setup (protocolName, createNodeServer) {
+function setup (protocolName, createBaseServer) {
     function postProcess (stub) {
         var response = {
                 statusCode: stub.statusCode || 200,
@@ -35,7 +35,8 @@ function setup (protocolName, createNodeServer) {
     function createServer (logger, options) {
         var proxy = HttpProxy.create(logger),
             resolver = StubResolver.create(proxy, postProcess),
-            stubs = StubRepository.create(resolver, options.recordRequests, 'utf8'),
+            stubs = StubRepository.create(resolver, options.debug, 'utf8'),
+            baseServer = createBaseServer(options),
             result = inherit.from(events.EventEmitter, {
                 errorHandler: function (error, container) {
                     container.response.writeHead(500, { 'content-type': 'application/json' });
@@ -58,11 +59,11 @@ function setup (protocolName, createNodeServer) {
                         return stubResponse;
                     });
                 },
-                metadata: combinators.constant({}),
+                metadata: baseServer.metadata,
                 addStub: stubs.addStub,
                 stubs: stubs.stubs
             }),
-            server = createNodeServer(options);
+            server = baseServer.createNodeServer();
 
         server.on('connection', function (socket) { result.emit('connection', socket); });
 
@@ -71,7 +72,7 @@ function setup (protocolName, createNodeServer) {
             result.emit('request', request.socket, container);
         });
 
-        result.close = function () { server.close(); };
+        result.close = function (callback) { server.close(callback); };
 
         result.listen = function (port) {
             var deferred = Q.defer();
@@ -82,7 +83,7 @@ function setup (protocolName, createNodeServer) {
         return result;
     }
 
-    function initialize (allowInjection, recordRequests) {
+    function initialize (allowInjection, recordRequests, debug) {
         var implementation = {
                 protocolName: protocolName,
                 createServer: createServer,
@@ -91,7 +92,7 @@ function setup (protocolName, createNodeServer) {
 
         return {
             name: protocolName,
-            create: AbstractServer.implement(implementation, recordRequests, logger).create,
+            create: AbstractServer.implement(implementation, recordRequests, debug, logger).create,
             Validator: {
                 create: function () {
                     return DryRunValidator.create({

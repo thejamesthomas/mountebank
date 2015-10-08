@@ -4,9 +4,10 @@ var assert = require('assert'),
     api = require('../api'),
     client = require('./baseHttpClient').create('http'),
     promiseIt = require('../../testHelpers').promiseIt,
+    compatibility = require('../../compatibility'),
     port = api.port + 1,
     isWindows = require('os').platform().indexOf('win') === 0,
-    timeout = parseInt(process.env.SLOW_TEST_TIMEOUT_MS || 2000);
+    timeout = parseInt(process.env.MB_SLOW_TEST_TIMEOUT || 2000);
 
 describe('http proxy stubs', function () {
     if (isWindows) {
@@ -421,24 +422,29 @@ describe('http proxy stubs', function () {
             assert.strictEqual(response.statusCode, 201, JSON.stringify(response.body, null, 2));
             return client.responseFor({ method: 'GET', port: port, path: '/', mode: 'binary' });
         }).then(function (response) {
-            assert.deepEqual(response.body.toJSON(), [0, 1, 2, 3]);
+            assert.deepEqual(compatibility.bufferJSON(response.body), [0, 1, 2, 3]);
         }).finally(function () {
             return api.del('/imposters');
         });
     });
 
-    promiseIt('should support http proxy to https server', function () {
-        var proxyStub = { responses: [{ proxy: { to: 'https://google.com' } }] },
-            proxyRequest = { protocol: 'http', port: port, stubs: [proxyStub], name: this.name + ' proxy' };
+    if (process.env.MB_AIRPLANE_MODE !== 'true') {
+        promiseIt('should support http proxy to https server', function () {
+            var proxyStub = {responses: [{proxy: {to: 'https://google.com'}}]},
+                proxyRequest = {protocol: 'http', port: port, stubs: [proxyStub], name: this.name + ' proxy'};
 
-        return api.post('/imposters', proxyRequest).then(function (response) {
-            assert.strictEqual(response.statusCode, 201, JSON.stringify(response.body, null, 2));
-            return client.get('/', port);
-        }).then(function (response) {
-            assert.strictEqual(response.statusCode, 301);
-            assert.strictEqual(response.headers.location, 'https://www.google.com/');
-        }).finally(function () {
-            return api.del('/imposters');
+            return api.post('/imposters', proxyRequest).then(function (response) {
+                assert.strictEqual(response.statusCode, 201, JSON.stringify(response.body, null, 2));
+                return client.get('/', port);
+            }).then(function (response) {
+                // Sometimes 301, sometimes 302
+                assert.strictEqual(response.statusCode.toString().substring(0, 2), '30');
+
+                // https://www.google.com.br in Brasil, etc
+                assert.ok(response.headers.location.indexOf('google.com') >= 0, response.headers.location);
+            }).finally(function () {
+                return api.del('/imposters');
+            });
         });
-    });
+    }
 });

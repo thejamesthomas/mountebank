@@ -32,7 +32,10 @@ function createServer () {
         result.emit('connection', raiSocket.socket);
     });
 
-    result.close = function () { server.server.end(combinators.noop); };
+    result.close = function (callback) {
+        server.server.end(combinators.noop);
+        callback();
+    };
 
     result.listen = function (port) {
         var deferred = Q.defer();
@@ -43,7 +46,7 @@ function createServer () {
     return result;
 }
 
-function initialize (recordRequests) {
+function initialize (recordRequests, debug) {
     var implementation = {
             protocolName: 'smtp',
             createServer: createServer,
@@ -64,7 +67,7 @@ function initialize (recordRequests) {
 
     return {
         name: implementation.protocolName,
-        create: AbstractServer.implement(implementation, recordRequests, logger).create,
+        create: AbstractServer.implement(implementation, recordRequests, debug, logger).create,
         Validator: noOpValidator
     };
 }

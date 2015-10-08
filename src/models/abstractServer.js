@@ -7,10 +7,11 @@ var Q = require('q'),
     Domain = require('domain'),
     errors = require('../util/errors');
 
-function implement (implementation, recordRequests, baseLogger) {
+function implement (implementation, recordRequests, debug, baseLogger) {
 
     function create (options) {
         options.recordRequests = recordRequests;
+        options.debug = debug;
 
         function scopeFor (port) {
             var scope = util.format('%s:%s', implementation.protocolName, port);
@@ -23,11 +24,13 @@ function implement (implementation, recordRequests, baseLogger) {
         var deferred = Q.defer(),
             requests = [],
             logger = ScopedLogger.create(baseLogger, scopeFor(options.port)),
-            server = implementation.createServer(logger, options);
+            server = implementation.createServer(logger, options),
+            connections = {};
 
         server.on('connection', function (socket) {
             var name = helpers.socketName(socket);
 
+            connections[name] = socket;
             logger.debug('%s ESTABLISHED', name);
 
             socket.on('error', function (error) {
@@ -35,7 +38,11 @@ function implement (implementation, recordRequests, baseLogger) {
             });
 
             socket.on('end', function () { logger.debug('%s LAST-ACK', name); });
-            socket.on('close', function () { logger.debug('%s CLOSED', name); });
+
+            socket.on('close', function () {
+                logger.debug('%s CLOSED', name);
+                delete connections[name];
+            });
         });
 
         server.on('request', function (socket, request, testCallback) {
@@ -56,7 +63,9 @@ function implement (implementation, recordRequests, baseLogger) {
                 implementation.Request.createFrom(request).then(function (simpleRequest) {
                     logger.debug('%s => %s', clientName, JSON.stringify(server.formatRequest(simpleRequest)));
                     if (recordRequests) {
-                        requests.push(simpleRequest);
+                        var recordedRequest = helpers.clone(simpleRequest);
+                        recordedRequest.timestamp = new Date().toJSON();
+                        requests.push(recordedRequest);
                     }
                     return server.respond(simpleRequest, request);
                 }).done(function (response) {
@@ -89,7 +98,15 @@ function implement (implementation, recordRequests, baseLogger) {
                 metadata: metadata,
                 port: actualPort,
                 close: function () {
-                    server.close(function () { logger.info ('Ciao for now'); });
+                    var closeDeferred = Q.defer();
+                    server.close(function () {
+                        logger.info('Ciao for now');
+                        closeDeferred.resolve();
+                    });
+                    Object.keys(connections).forEach(function (socket) {
+                        connections[socket].destroy();
+                    });
+                    return closeDeferred.promise;
                 }
             });
         });

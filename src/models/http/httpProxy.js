@@ -4,10 +4,9 @@ var http = require('http'),
     https = require('https'),
     url = require('url'),
     Q = require('q'),
-    AbstractProxy = require('../abstractProxy'),
-    combinators = require('../../util/combinators'),
     querystring = require('querystring'),
-    helpers = require('../../util/helpers');
+    helpers = require('../../util/helpers'),
+    errors = require('../../util/errors');
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
@@ -29,7 +28,7 @@ function create (logger) {
         return result;
     }
 
-    function getProxyRequest (baseUrl, originalRequest) {
+    function getProxyRequest (baseUrl, originalRequest, proxyOptions) {
         var parts = url.parse(baseUrl),
             protocol = parts.protocol === 'https:' ? https : http,
             defaultPort = parts.protocol === 'https:' ? 443 : 80,
@@ -39,7 +38,9 @@ function create (logger) {
                 port: parts.port || defaultPort,
                 auth: parts.auth,
                 path: toUrl(originalRequest.path, originalRequest.query),
-                headers: helpers.clone(originalRequest.headers)
+                headers: helpers.clone(originalRequest.headers),
+                cert: proxyOptions.cert,
+                key: proxyOptions.key
             };
         options.headers.connection = 'close';
         options.headers.host = hostnameFor(parts.protocol, parts.hostname, options.port);
@@ -97,14 +98,41 @@ function create (logger) {
         return deferred.promise;
     }
 
-    return AbstractProxy.create({
-        logger: logger,
-        formatRequest: combinators.identity,
-        formatResponse: combinators.identity,
-        formatDestination: combinators.identity,
-        getProxyRequest: getProxyRequest,
-        proxy: proxy
-    });
+    function to (proxyDestination, originalRequest, options) {
+
+        function log (direction, what) {
+            logger.debug('Proxy %s %s %s %s %s',
+                originalRequest.requestFrom, direction, JSON.stringify(what), direction, proxyDestination);
+        }
+
+        var deferred = Q.defer(),
+            proxiedRequest = getProxyRequest(proxyDestination, originalRequest, options);
+
+        log('=>', originalRequest);
+
+        proxy(proxiedRequest).done(function (response) {
+            log('<=', response);
+            deferred.resolve(response);
+        });
+
+        proxiedRequest.once('error', function (error) {
+            if (error.code === 'ENOTFOUND') {
+                deferred.reject(errors.InvalidProxyError('Cannot resolve ' + JSON.stringify(proxyDestination)));
+            }
+            else if (error.code === 'ECONNREFUSED') {
+                deferred.reject(errors.InvalidProxyError('Unable to connect to ' + JSON.stringify(proxyDestination)));
+            }
+            else {
+                deferred.reject(error);
+            }
+        });
+
+        return deferred.promise;
+    }
+
+    return {
+        to: to
+    };
 }
 
 module.exports = {

@@ -27,9 +27,8 @@ function fireAndForget (message, serverPort) {
 
     // Attempt to avoid race conditions where the subsequent test code
     // gets ahead of the server's ability to record the request
-    setTimeout(function () {
-        deferred.resolve();
-    }, 150);
+    setTimeout(deferred.resolve, 150);
+    return deferred.promise;
 }
 
 module.exports = {

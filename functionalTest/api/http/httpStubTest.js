@@ -4,8 +4,9 @@ var assert = require('assert'),
     api = require('../api'),
     BaseHttpClient = require('./baseHttpClient'),
     promiseIt = require('../../testHelpers').promiseIt,
+    compatibility = require('../../compatibility'),
     port = api.port + 1,
-    timeout = parseInt(process.env.SLOW_TEST_TIMEOUT_MS || 2000),
+    timeout = parseInt(process.env.MB_SLOW_TEST_TIMEOUT || 2000),
     helpers = require('../../../src/util/helpers');
 
 ['http', 'https'].forEach(function (protocol) {
@@ -194,7 +195,9 @@ var assert = require('assert'),
                 }).then(function (response) {
                     assert.strictEqual(response.body, 'stub');
                     var time = new Date() - timer;
-                    assert.ok(time > 1000);
+
+                    // Occasionally there's some small inaccuracies
+                    assert.ok(time >= 990, 'actual time: ' + time);
                 }).finally(function () {
                     return api.del('/imposters');
                 });
@@ -298,7 +301,7 @@ var assert = require('assert'),
                     assert.strictEqual(response.statusCode, 201);
                     return client.responseFor({ method: 'GET', port: port, path: '/', mode: 'binary' });
                 }).then(function (response) {
-                    assert.deepEqual(response.body.toJSON(), [0, 1, 2, 3]);
+                    assert.deepEqual(compatibility.bufferJSON(response.body), [0, 1, 2, 3]);
                 }).finally(function () {
                     return api.del('/imposters');
                 });

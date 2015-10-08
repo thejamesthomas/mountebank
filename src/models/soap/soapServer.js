@@ -71,9 +71,9 @@ function logConnection (logger, socket) {
 /**
  * Spins up a server listening on a socket
  * @param options - the JSON request body for the imposter create request
- * @param recordRequests - the inverse of the --nomock command line parameter
+ * @param recordRequests - the --mock command line parameter
  */
-function createServer (options, recordRequests) {
+function createServer (options, recordRequests, debug) {
     var deferred = Q.defer(),
         requests = [],
         logger = ScopedLogger.create(baseLogger, scopeFor(options.port)),
@@ -81,7 +81,7 @@ function createServer (options, recordRequests) {
         wsdl = WSDL.parse(options.wsdl),
         postProcess = combinators.curry(createResponse, wsdl),
         resolver = StubResolver.create(proxy, postProcess),
-        stubs = StubRepository.create(resolver, recordRequests, 'utf8'),
+        stubs = StubRepository.create(resolver, debug, 'utf8'),
         server = http.createServer(),
         connectionLogger = combinators.curry(logConnection, logger);
 
@@ -103,7 +103,9 @@ function createServer (options, recordRequests) {
                 logger.info('%s => %s', clientName, simpleRequest.method);
                 logger.debug('%s => %s', clientName, JSON.stringify(simpleRequest));
                 if (recordRequests) {
-                    requests.push(simpleRequest);
+                    var recordedRequest = helpers.clone(simpleRequest);
+                    recordedRequest.timestamp = new Date().toJSON();
+                    requests.push(recordedRequest);
                 }
 
                 return stubs.resolve(simpleRequest, logger.withScope(helpers.socketName(request.socket)));
@@ -147,11 +149,11 @@ function createServer (options, recordRequests) {
     return deferred.promise;
 }
 
-function initialize (allowInjection, recordRequests) {
+function initialize (allowInjection, recordRequests, debug) {
     return {
         name: 'soap',
         create: function (request) {
-            return createServer(request, recordRequests);
+            return createServer(request, recordRequests, debug);
         },
         Validator: {
             create: function () {

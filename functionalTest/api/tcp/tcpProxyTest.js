@@ -4,10 +4,11 @@ var assert = require('assert'),
     TcpProxy = require('../../../src/models/tcp/tcpProxy'),
     api = require('../api'),
     promiseIt = require('../../testHelpers').promiseIt,
+    compatibility = require('../../compatibility'),
     port = api.port + 1,
     isWindows = require('os').platform().indexOf('win') === 0,
     net = require('net'),
-    timeout = parseInt(process.env.SLOW_TEST_TIMEOUT_MS || 3000);
+    timeout = parseInt(process.env.MB_SLOW_TEST_TIMEOUT || 3000);
 
 describe('tcp proxy', function () {
     if (isWindows) {
@@ -45,7 +46,7 @@ describe('tcp proxy', function () {
             return api.post('/imposters', request).then(function () {
                 return proxy.to({ host: 'localhost', port: port }, { data: buffer });
             }).then(function (response) {
-                assert.deepEqual(new Buffer(response.data, 'base64').toJSON(), [0, 1, 2, 3]);
+                assert.deepEqual(compatibility.bufferJSON(new Buffer(response.data, 'base64')), [0, 1, 2, 3]);
             }).finally(function () {
                 return api.del('/imposters');
             });

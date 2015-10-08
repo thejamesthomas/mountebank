@@ -5,7 +5,7 @@ var assert = require('assert'),
     api = require('../api'),
     promiseIt = require('../../testHelpers').promiseIt,
     port = api.port + 1,
-    timeout = parseInt(process.env.SLOW_TEST_TIMEOUT_MS || 3000);
+    timeout = parseInt(process.env.MB_SLOW_TEST_TIMEOUT || 3000);
 
 describe('http proxy', function () {
     this.timeout(timeout);
@@ -20,7 +20,7 @@ describe('http proxy', function () {
                 request = { path: '/PATH', method: 'POST', body: 'BODY', headers: { 'X-Key': 'TRUE' }};
 
             return api.post('/imposters', proxyRequest).then(function () {
-                return proxy.to('http://localhost:' + port, request);
+                return proxy.to('http://localhost:' + port, request, {});
             }).then(function (response) {
                 assert.strictEqual(response.statusCode, 200, 'did not get a 200 from proxy');
 
@@ -44,7 +44,7 @@ describe('http proxy', function () {
             return api.post('/imposters', request).then(function (response) {
                 assert.strictEqual(response.statusCode, 201, JSON.stringify(response.body));
 
-                return proxy.to('http://localhost:' + port, { path: '/', method: 'GET', headers: {} });
+                return proxy.to('http://localhost:' + port, { path: '/', method: 'GET', headers: {} }, {});
             }).then(function (response) {
                 assert.strictEqual(response.statusCode, 400);
                 assert.strictEqual(response.body, 'ERROR');
@@ -60,7 +60,7 @@ describe('http proxy', function () {
             return api.post('/imposters', request).then(function (response) {
                 assert.strictEqual(response.statusCode, 201, JSON.stringify(response.body));
 
-                return proxy.to('https://localhost:' + port, { path: '/', method: 'GET', headers: {} });
+                return proxy.to('https://localhost:' + port, { path: '/', method: 'GET', headers: {} }, {});
             }).then(function (response) {
                 assert.strictEqual(response.statusCode, 400);
                 assert.strictEqual(response.body, 'ERROR');
@@ -79,7 +79,7 @@ describe('http proxy', function () {
             return api.post('/imposters', request).then(function (response) {
                 assert.strictEqual(response.statusCode, 201, JSON.stringify(response.body));
 
-                return proxy.to('http://localhost:' + port, { path: '/', method: 'GET', headers: { host: 'www.mbtest.org' } });
+                return proxy.to('http://localhost:' + port, { path: '/', method: 'GET', headers: { host: 'www.mbtest.org' } }, {});
             }).then(function (response) {
                 assert.strictEqual(response.statusCode, 400);
                 assert.strictEqual(response.body, 'ERROR');
@@ -89,7 +89,7 @@ describe('http proxy', function () {
         });
 
         promiseIt('should gracefully deal with DNS errors', function () {
-            return proxy.to('http://no.such.domain', { path: '/', method: 'GET', headers: {} }).then(function () {
+            return proxy.to('http://no.such.domain', { path: '/', method: 'GET', headers: {} }, {}).then(function () {
                 assert.fail('should not have resolved promise');
             }, function (reason) {
                 assert.deepEqual(reason, {
@@ -100,7 +100,7 @@ describe('http proxy', function () {
         });
 
         promiseIt('should gracefully deal with bad urls', function () {
-            return proxy.to('1 + 2', { path: '/', method: 'GET', headers: {} }).then(function () {
+            return proxy.to('1 + 2', { path: '/', method: 'GET', headers: {} }, {}).then(function () {
                 assert.fail('should not have resolved promise');
             }, function (reason) {
                 assert.deepEqual(reason, {
@@ -128,7 +128,7 @@ describe('http proxy', function () {
                 return api.post('/imposters', request).then(function (response) {
                     assert.strictEqual(response.statusCode, 201, JSON.stringify(response.body));
 
-                    return proxy.to('http://localhost:' + port, { path: '/', method: 'GET', headers: {} });
+                    return proxy.to('http://localhost:' + port, { path: '/', method: 'GET', headers: {} }, {});
                 }).then(function (response) {
                     assert.strictEqual(response.body, buffer.toString('base64'));
                     assert.strictEqual(response._mode, 'binary');
@@ -138,11 +138,16 @@ describe('http proxy', function () {
             });
         });
 
-        promiseIt('should proxy to different host', function () {
-            return proxy.to('https://google.com', { path: '/', method: 'GET', headers: {} }, function (response) {
-                assert.strictEqual(response.statusCode, 301);
-                assert.strictEqual(response.headers.location, 'https://www.google.com/');
+        if (process.env.MB_AIRPLANE_MODE !== 'true') {
+            promiseIt('should proxy to different host', function () {
+                return proxy.to('https://google.com', { path: '/', method: 'GET', headers: {} }, {}).then(function (response) {
+                    // sometimes 301, sometimes 302
+                    assert.strictEqual(response.statusCode.toString().substring(0, 2), '30');
+
+                    // https://www.google.com.br in Brasil, etc
+                    assert.ok(response.headers.location.indexOf('google.com') >= 0, response.headers.location);
+                });
             });
-        });
+        }
     });
 });

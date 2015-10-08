@@ -34,9 +34,9 @@ function scopeFor (port, name) {
 /**
  * Spins up a server listening on a socket
  * @param options - the JSON request body for the imposter create request
- * @param recordRequests - the inverse of the --nomock command line parameter
+ * @param recordRequests - the --mock command line parameter
  */
-function createServer (options, recordRequests) {
+function createServer (options, recordRequests, debug) {
             // This is an async operation, so we use a deferred
     var deferred = Q.defer(),
             // and an array to record all requests for mock verification
@@ -49,7 +49,7 @@ function createServer (options, recordRequests) {
             // the postProcess parameter is used to fill in defaults for the response that were not passed by the user
         resolver = StubResolver.create(proxy, postProcess),
             // create the repository which matches the appropriate stub to respond with
-        stubs = StubRepository.create(resolver, recordRequests, 'utf8'),
+        stubs = StubRepository.create(resolver, debug, 'utf8'),
             // and create the actual server using node.js's net module
         server = net.createServer();
 
@@ -64,7 +64,9 @@ function createServer (options, recordRequests) {
 
             // remember the request for mock verification, unless told not to
             if (recordRequests) {
-                requests.push(request);
+                var recordedRequest = helpers.clone(request);
+                recordedRequest.timestamp = new Date().toJSON();
+                requests.push(recordedRequest);
             }
 
             // let's resolve any stubs (don't worry - there are defaults if no stubs are defined)
@@ -114,16 +116,16 @@ function createServer (options, recordRequests) {
 /**
  * Creates the core protocol interface - all protocols must implement
  * @param allowInjection - represents the command line --allowInjection parameter
- * @param recordRequests - represents the inverse of the command line --nomock parameter
+ * @param recordRequests - represents the command line --mock parameter
  */
-function initialize (allowInjection, recordRequests) {
+function initialize (allowInjection, recordRequests, debug) {
     return {
         // The name of the protocol, used in JSON representation of imposters
         name: 'foo',
 
         // The creation method, called in imposter.js.  The request JSON object gets passed in
         create: function (request) {
-            return createServer(request, recordRequests);
+            return createServer(request, recordRequests, debug);
         },
 
         // The validator used when creating imposters

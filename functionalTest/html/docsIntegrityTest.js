@@ -5,7 +5,7 @@ var assert = require('assert'),
     promiseIt = require('../testHelpers').promiseIt,
     docs = require('./docs'),
     isWindows = require('os').platform().indexOf('win') === 0,
-    timeout = parseInt(process.env.SLOW_TEST_TIMEOUT_MS || 3000);
+    timeout = parseInt(process.env.MB_SLOW_TEST_TIMEOUT || 3000);
 
 function normalize (text, linesToIgnore) {
     text = (text || '').replace(/\r/g, '');
@@ -34,7 +34,7 @@ function executeTest (doc) {
 
                 if (actual !== expected) {
                     console.log("%s %s step %s failed; below is the actual result", doc.endpoint, doc.name, step.id);
-                    console.log(actual);
+                    console.log(normalize(step.result));
                 }
                 assert.strictEqual(actual, expected);
             }
@@ -56,6 +56,9 @@ function validateDocs (page) {
 describe('docs', function () {
     this.timeout(timeout);
 
+    // The behavior changes in minor and annoying ways between node versions
+    // (e.g. using IPv6 remoteAddress or changing the order of headers), making
+    // these tests not easy to reuse between them.
     [
         '/docs/api/overview',
         '/docs/api/mocks',
@@ -63,8 +66,8 @@ describe('docs', function () {
         '/docs/api/injection',
         '/docs/api/behaviors'
     ].forEach(function (page) {
-        validateDocs(page);
-    });
+            validateDocs(page);
+        });
 
     if (!isWindows) {
         [

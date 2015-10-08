@@ -4,7 +4,7 @@ var assert = require('assert'),
     api = require('../api'),
     promiseIt = require('../../testHelpers').promiseIt,
     port = api.port + 1,
-    timeout = parseInt(process.env.SLOW_TEST_TIMEOUT_MS || 2000),
+    timeout = parseInt(process.env.MB_SLOW_TEST_TIMEOUT || 2000),
     tcp = require('../tcp/tcpClient');
 
 describe('foo imposter', function () {
@@ -62,7 +62,7 @@ describe('foo imposter', function () {
                     responses: [{ is: { data: 'MATCH' }}],
                     predicates: [
                         { equals: { data: 'test' } },
-                        { startsWith: { requestFrom: '127.0.0.1' } }
+                        { startsWith: { data: 'te' } }
                     ]
                 },
                 request = { protocol: 'foo', port: port, stubs: [stub] };
@@ -82,14 +82,14 @@ describe('foo imposter', function () {
         });
 
         promiseIt('should allow proxy stubs', function () {
-            var proxyPort = port + 1,
-                proxyStub = { responses: [{ is: { data: 'PROXIED' } }] },
-                proxyRequest = { protocol: 'foo', port: proxyPort, stubs: [proxyStub], name: this.name + ' PROXY' },
-                stub = { responses: [{ proxy: { to: { host: 'localhost', port:  proxyPort } } }] },
-                request = { protocol: 'foo', port: port, stubs: [stub], name: this.name + ' MAIN' };
+            var originServerPort = port + 1,
+                originServerStub = { responses: [{ is: { data: 'PROXIED' } }] },
+                originServerRequest = { protocol: 'foo', port: originServerPort, stubs: [originServerStub], name: this.name + ' ORIGIN' },
+                proxyStub = { responses: [{ proxy: { to: { host: 'localhost', port:  originServerPort } } }] },
+                proxyRequest = { protocol: 'foo', port: port, stubs: [proxyStub], name: this.name + ' PROXY' };
 
-            return api.post('/imposters', proxyRequest).then(function () {
-                return api.post('/imposters', request);
+            return api.post('/imposters', originServerRequest).then(function () {
+                return api.post('/imposters', proxyRequest);
             }).then(function () {
                 return tcp.send('request', port);
             }).then(function (response) {

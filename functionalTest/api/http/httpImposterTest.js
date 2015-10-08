@@ -4,7 +4,8 @@ var assert = require('assert'),
     api = require('../api'),
     promiseIt = require('../../testHelpers').promiseIt,
     port = api.port + 1,
-    timeout = parseInt(process.env.SLOW_TEST_TIMEOUT_MS || 4000),
+    mb = require('../../mb').create(port + 1),
+    timeout = parseInt(process.env.MB_SLOW_TEST_TIMEOUT || 4000),
     BaseHttpClient = require('./baseHttpClient');
 
 ['http', 'https'].forEach(function (protocol) {
@@ -90,7 +91,7 @@ var assert = require('assert'),
                 }).then(function (response) {
                     var stubs = JSON.stringify(response.body.stubs),
                         withTimeRemoved = stubs.replace(/"timestamp":"[^"]+"/g, '"timestamp":"NOW"'),
-                        withClientPortRemoved = withTimeRemoved.replace(/"requestFrom":"[:\.\d]+"/g, '"requestFrom":"HERE"'),
+                        withClientPortRemoved = withTimeRemoved.replace(/"requestFrom":"[a-f:\.\d]+"/g, '"requestFrom":"HERE"'),
                         actualWithoutEphemeralData = JSON.parse(withClientPortRemoved),
                         requestHeaders = { accept: 'application/json', host: 'localhost:' + port, connection: 'keep-alive' };
 
@@ -138,6 +139,25 @@ var assert = require('assert'),
                 });
             });
 
+            promiseIt('should not record matches against stubs if --debug flag is missing', function () {
+                var stub = { responses: [{ is: { body: '1' } }, { is: { body: '2' } }] },
+                    request = { protocol: protocol, port: port, stubs: [stub], name: this.name};
+
+                return mb.start().then(function () {
+                    return mb.post('/imposters', request);
+                }).then(function () {
+                    return client.get('/first?q=1', port);
+                }).then(function () {
+                    return client.get('/second?q=2', port);
+                }).then(function () {
+                    return mb.get('/imposters/' + port);
+                }).then(function (response) {
+                    assert.deepEqual(response.body.stubs, [ { responses: [{ is: { body: '1' } }, { is: { body: '2' } }] } ]);
+                }).finally(function () {
+                    return mb.stop();
+                });
+            });
+
             promiseIt('should return 404 if imposter has not been created', function () {
                 return api.get('/imposters/3535').then(function (response) {
                     assert.strictEqual(response.statusCode, 404);
@@ -145,7 +165,7 @@ var assert = require('assert'),
             });
         });
 
-        describe('DELETE /imposters/:id should shutdown server at that port', function () {
+        describe('DELETE /imposters/:id', function () {
             promiseIt('should shutdown server at that port', function () {
                 var request = { protocol: protocol, port: port, name: this.name };
 

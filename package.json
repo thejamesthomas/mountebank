@@ -1,7 +1,7 @@
 {
   "name": "mountebank",
   "preferGlobal": true,
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": "Brandon Byars <brandon.byars@gmail.com>",
   "description": "Over the wire test doubles",
   "homepage": "http://www.mbtest.org",
@@ -20,9 +20,9 @@
     }
   },
   "scripts": {
-    "start": "./bin/mb",
-    "restart": "./bin/mb restart",
-    "stop": "./bin/mb stop"
+    "start": "bin/mb",
+    "restart": "bin/mb restart",
+    "stop": "bin/mb stop"
   },
   "keywords": [
     "test",
@@ -34,35 +34,48 @@
     "http",
     "https",
     "tcp",
-    "net"
+    "net",
+    "service virtualization"
   ],
   "dependencies": {
     "ejs": "~2.3.1",
     "errorhandler": "^1.0.0",
-    "express": "~4.12.0",
+    "express": "~4.13.3",
     "json-stable-stringify": "~1.0.0",
-    "mailparser": "~0.4.1",
-    "npm": "~2.7.4",
-    "q": "~1.2.0",
+    "mailparser": "~0.5.2",
+    "npm": "~3.3.3",
+    "q": "~1.4.1",
     "simplesmtp": "~0.3.16",
-    "soap": "^0.8.0",
+    "soap": "^0.9.1",
     "winston": "~1.0.0",
     "xml2js": "^0.4.4",
-    "cors": "~2.5.3"
+    "cors": "~2.7.1"
   },
   "devDependencies": {
-    "grunt": "~0.4.1",
-    "grunt-contrib-jshint": "~0.11.0",
-    "mocha": "~2.1.0",
-    "grunt-mocha-test": "~0.12.1",
     "blanket": "~1.1.5",
     "coveralls": "~2.11.1",
-    "mocha-lcov-reporter": "0.0.1",
-    "w3cjs": "~0.1.21",
-    "jsdom": "~3.1.0",
-    "fs-extra": "~0.18.0"
+    "fs-extra": "~0.24.0",
+    "grunt": "~0.4.1",
+    "grunt-cli": "^0.1.13",
+    "grunt-contrib-jshint": "~0.11.0",
+    "grunt-mocha-test": "~0.12.1",
+    "jsdom": "~6.5.0",
+    "mocha": "~2.3.1",
+    "mocha-lcov-reporter": "1.0.0",
+    "w3cjs": "~0.3.0"
+  },
+  "devDependenciesBasedOnNodeVersion": {
+    "v0.10": {
+      "jsdom": "~3.1.0"
+    },
+    "v0.12": {
+      "jsdom": "~3.1.0"
+    },
+    "v4.0": {
+      "jsdom": "~6.5.0"
+    }
   },
   "engines": {
-    "node": "=0.10"
+    "node": ">=0.10"
   }
 }

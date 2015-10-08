@@ -1,42 +1,12 @@
 'use strict';
 
 var assert = require('assert'),
-    spawn = require('child_process').spawn,
-    path = require('path'),
     api = require('../api'),
-    isWindows = require('os').platform().indexOf('win') === 0,
-    BaseHttpClient = require('../http/baseHttpClient'),
     tcp = require('./tcpClient'),
-    Q = require('q'),
     promiseIt = require('../../testHelpers').promiseIt,
     port = api.port + 1,
-    timeout = parseInt(process.env.SLOW_TEST_TIMEOUT_MS || 4000);
-
-function nonInjectableServer (command, port) {
-    var deferred = Q.defer(),
-        calledDone = false,
-        mbPath = path.normalize(__dirname + '/../../../bin/mb'),
-        options = [command, '--port', port, '--pidfile', 'imposter-test.pid'],
-        mb;
-
-    if (isWindows) {
-        options.unshift(mbPath);
-        mb = spawn('node', options);
-    }
-    else {
-        mb = spawn(mbPath, options);
-    }
-
-    ['stdout', 'stderr'].forEach(function (stream) {
-        mb[stream].on('data', function () {
-            if (!calledDone) {
-                calledDone = true;
-                deferred.resolve();
-            }
-        });
-    });
-    return deferred.promise;
-}
+    mb = require('../../mb').create(port + 1),
+    timeout = parseInt(process.env.MB_SLOW_TEST_TIMEOUT || 4000);
 
 describe('tcp imposter', function () {
     this.timeout(timeout);
@@ -99,24 +69,23 @@ describe('tcp imposter', function () {
         });
 
         promiseIt('should return a 400 if injection is disallowed and inject is used', function () {
-            var mbPort = port + 1,
-                fn = function () { return { data: 'INJECTED' }; },
+            var fn = function () { return { data: 'INJECTED' }; },
                 stub = { responses: [{ inject: fn.toString() }] },
-                request = { protocol: 'tcp', port: port, stubs: [stub], name: this.name },
-                mbApi = BaseHttpClient.create('http');
+                request = { protocol: 'tcp', port: port, stubs: [stub], name: this.name };
 
-            return nonInjectableServer('start', mbPort).then(function () {
-                return mbApi.post('/imposters', request, mbPort);
+            return mb.start().then(function () {
+                return mb.post('/imposters', request);
             }).then(function (response) {
                 assert.strictEqual(response.statusCode, 400);
                 assert.strictEqual(response.body.errors[0].code, 'invalid injection');
             }).finally(function () {
-                return nonInjectableServer('stop', mbPort);
+                return mb.stop();
             });
         });
 
-        promiseIt('should allow asynchronous injection', function () {
-            var fn = function (request, state, logger, callback) {
+        if (process.env.MB_AIRPLANE_MODE !== 'true') {
+            promiseIt('should allow asynchronous injection', function () {
+                var fn = function (request, state, logger, callback) {
                         var net = require('net'),
                             options = {
                                 host: 'www.google.com',
@@ -126,22 +95,23 @@ describe('tcp imposter', function () {
                                 socket.end(request.data + '\n');
                             });
                         socket.once('data', function (data) {
-                            callback({ data: data });
+                            callback({data: data});
                         });
                         // No return value!!!
                     },
-                stub = { responses: [{ inject: fn.toString() }] };
+                    stub = {responses: [{inject: fn.toString()}]};
 
-            return api.post('/imposters', { protocol: 'tcp', port: port, stubs: [stub] }).then(function (response) {
-                assert.strictEqual(response.statusCode, 201, JSON.stringify(response.body));
+                return api.post('/imposters', {protocol: 'tcp', port: port, stubs: [stub]}).then(function (response) {
+                    assert.strictEqual(response.statusCode, 201, JSON.stringify(response.body));
 
-                return tcp.send('GET /', port);
-            }).then(function (response) {
-                assert.strictEqual(response.toString().indexOf('HTTP/1.0 200'), 0);
-            }).finally(function () {
-                return api.del('/imposters');
+                    return tcp.send('GET /', port);
+                }).then(function (response) {
+                    assert.strictEqual(response.toString().indexOf('HTTP/1.0'), 0);
+                }).finally(function () {
+                    return api.del('/imposters');
+                });
             });
-        });
+        }
 
         promiseIt('should allow binary requests extending beyond a single packet using endOfRequestResolver', function () {
             // We'll simulate a protocol that has a 4 byte message length at byte 0 indicating how many bytes follow

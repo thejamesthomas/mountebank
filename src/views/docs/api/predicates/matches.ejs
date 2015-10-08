@@ -76,11 +76,11 @@ Accept: application/json
 <code class='hidden' data-test-id='tcp matches example'
                      data-test-verify-step='4'
                      data-test-type='http'
-                     data-test-ignore-lines='["^Date", "requestFrom", "timestamp"]'>
+                     data-test-ignore-lines='["^Date", "requestFrom", "timestamp", "Content-Length"]'>
 HTTP/1.1 200 OK
 Vary: Accept
 Content-Type: application/json; charset=utf-8
-Content-Length: 1738
+Content-Length: 1966
 Date: Sun, 26 Jan 2014 17:20:10 GMT
 Connection: keep-alive
 
@@ -90,12 +90,14 @@ Connection: keep-alive
   "mode": "text",
   "requests": [
     {
-      "requestFrom": "127.0.0.1:52862",
-      "data": "first second\n"
+      "requestFrom": "::1:60162",
+      "data": "first second\n",
+      "timestamp": "2014-01-26T17:20:10.022Z"
     },
     {
-      "requestFrom": "127.0.0.1:52864",
-      "data": "Second Request\n"
+      "requestFrom": "::1:60171",
+      "data": "Second Request\n",
+      "timestamp": "2014-01-26T17:20:10.043Z"
     }
   ],
   "stubs": [
@@ -119,7 +121,7 @@ Connection: keep-alive
         {
           "timestamp": "2014-01-26T17:20:10.102Z",
           "request": {
-            "requestFrom": "127.0.0.1:52862",
+            "requestFrom": "::1:60162",
             "data": "first second\n"
           },
           "response": {
@@ -147,7 +149,7 @@ Connection: keep-alive
         {
           "timestamp": "2014-01-26T17:20:10.117Z",
           "request": {
-            "requestFrom": "127.0.0.1:52864",
+            "requestFrom": "::1:60171",
             "data": "Second Request\n"
           },
           "response": {

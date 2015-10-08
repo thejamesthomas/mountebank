@@ -4,7 +4,7 @@ var fs = require('fs'),
     ejs = require('ejs'),
     helpers = require('../util/helpers');
 
-function create (currentVersion, releases, options) {
+function create (releases, options) {
 
     // Init once since we hope many consumers poll the heroku feed and we don't have monitoring
     var feedReleases = helpers.clone(releases);
@@ -24,7 +24,11 @@ function create (currentVersion, releases, options) {
         if (!feedReleases[0].view) {
             feedReleases.forEach(function (release) {
                 var contents = fs.readFileSync(releaseFilenameFor(release.version), { encoding: 'utf8' });
-                release.view = ejs.render(contents, { host: request.headers.host });
+                release.view = ejs.render(contents, {
+                    host: request.headers.host,
+                    releaseMajorMinor: release.version.replace(/^v(\d+\.\d+).*/, '$1'),
+                    releaseVersion: release.version.replace('v', '')
+                });
             });
         }
 
@@ -38,8 +42,13 @@ function create (currentVersion, releases, options) {
     }
 
     function getRelease (request, response) {
-        var config = { host: request.headers.host, heroku: options.heroku, version: currentVersion},
-            version = request.params.version;
+        var version = request.params.version,
+            config = {
+                host: request.headers.host,
+                heroku: options.heroku,
+                releaseMajorMinor: version.replace(/^v(\d+\.\d+).*/, '$1'),
+                releaseVersion: version.replace('v', '')
+            };
 
         if (fs.existsSync(releaseFilenameFor(version))) {
             response.render('_header', config, function (error, header) {

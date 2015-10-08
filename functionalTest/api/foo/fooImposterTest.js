@@ -5,7 +5,7 @@ var assert = require('assert'),
     tcp = require('../tcp/tcpClient'),
     promiseIt = require('../../testHelpers').promiseIt,
     port = api.port + 1,
-    timeout = parseInt(process.env.SLOW_TEST_TIMEOUT_MS || 2000);
+    timeout = parseInt(process.env.MB_SLOW_TEST_TIMEOUT || 2000);
 
 describe('foo imposter', function () {
     this.timeout(timeout);
@@ -74,7 +74,7 @@ describe('foo imposter', function () {
             }).then(function (response) {
                 var stubs = JSON.stringify(response.body.stubs),
                     withTimeRemoved = stubs.replace(/"timestamp":"[^"]+"/g, '"timestamp":"NOW"'),
-                    withClientPortRemoved = withTimeRemoved.replace(/"requestFrom":"[:\.\d]+"/g, '"requestFrom":"HERE"'),
+                    withClientPortRemoved = withTimeRemoved.replace(/"requestFrom":"[a-f:\.\d]+"/g, '"requestFrom":"HERE"'),
                     actualWithoutEphemeralData = JSON.parse(withClientPortRemoved);
 
                 assert.deepEqual(actualWithoutEphemeralData, [{

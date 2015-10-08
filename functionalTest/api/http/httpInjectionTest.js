@@ -1,41 +1,13 @@
 'use strict';
 
 var assert = require('assert'),
-    spawn = require('child_process').spawn,
-    path = require('path'),
     api = require('../api'),
     isWindows = require('os').platform().indexOf('win') === 0,
     BaseHttpClient = require('./baseHttpClient'),
-    Q = require('q'),
     promiseIt = require('../../testHelpers').promiseIt,
     port = api.port + 1,
-    timeout = parseInt(process.env.SLOW_TEST_TIMEOUT_MS || 4000);
-
-function nonInjectableServer (command, mbPort) {
-    var deferred = Q.defer(),
-        calledDone = false,
-        mbPath = path.normalize(__dirname + '/../../../bin/mb'),
-        options = [command, '--port', mbPort, '--pidfile', 'imposter-test.pid'],
-        mb;
-
-    if (isWindows) {
-        options.unshift(mbPath);
-        mb = spawn('node', options);
-    }
-    else {
-        mb = spawn(mbPath, options);
-    }
-
-    ['stdout', 'stderr'].forEach(function (stream) {
-        mb[stream].on('data', function () {
-            if (!calledDone) {
-                calledDone = true;
-                deferred.resolve();
-            }
-        });
-    });
-    return deferred.promise;
-}
+    mb = require('../../mb').create(port + 1),
+    timeout = parseInt(process.env.MB_SLOW_TEST_TIMEOUT || 4000);
 
 ['http', 'https'].forEach(function (protocol) {
     var client = BaseHttpClient.create(protocol);
@@ -149,24 +121,23 @@ function nonInjectableServer (command, mbPort) {
             });
 
             promiseIt('should return a 400 if injection is disallowed and inject is used', function () {
-                var mbPort = port + 1,
-                    fn = function (request) { return { body: request.method + ' INJECTED' }; },
+                var fn = function (request) { return { body: request.method + ' INJECTED' }; },
                     stub = { responses: [{ inject: fn.toString() }] },
-                    request = { protocol: protocol, port: port, stubs: [stub], name: this.name },
-                    mbApi = BaseHttpClient.create('http');
+                    request = { protocol: protocol, port: port, stubs: [stub], name: this.name };
 
-                return nonInjectableServer('start', mbPort).then(function () {
-                    return mbApi.post('/imposters', request, mbPort);
+                return mb.start().then(function () {
+                    return mb.post('/imposters', request);
                 }).then(function (response) {
                     assert.strictEqual(response.statusCode, 400);
                     assert.strictEqual(response.body.errors[0].code, 'invalid injection');
                 }).finally(function () {
-                    return nonInjectableServer('stop', mbPort);
+                    return mb.stop();
                 });
             });
 
-            promiseIt('should allow asynchronous injection', function () {
-                var fn = function (request, state, logger, callback) {
+            if (process.env.MB_AIRPLANE_MODE !== 'true') {
+                promiseIt('should allow asynchronous injection', function () {
+                    var fn = function (request, state, logger, callback) {
                             var http = require('http'),
                                 options = {
                                     method: request.method,
@@ -192,20 +163,24 @@ function nonInjectableServer (command, mbPort) {
                             httpRequest.end();
                             // No return value!!!
                         },
-                    stub = { responses: [{ inject: fn.toString() }] },
-                    request = { protocol: protocol, port: port, stubs: [stub], name: this.name };
+                        stub = {responses: [{inject: fn.toString()}]},
+                        request = {protocol: protocol, port: port, stubs: [stub], name: this.name};
 
-                return api.post('/imposters', request).then(function (response) {
-                    assert.strictEqual(response.statusCode, 201, JSON.stringify(response.body));
+                    return api.post('/imposters', request).then(function (response) {
+                        assert.strictEqual(response.statusCode, 201, JSON.stringify(response.body));
 
-                    return client.get('', port);
-                }).then(function (response) {
-                    assert.strictEqual(response.statusCode, 302);
-                    assert.strictEqual(response.headers.location, 'http://www.google.com/');
-                }).finally(function () {
-                    return api.del('/imposters');
+                        return client.get('', port);
+                    }).then(function (response) {
+                        // sometimes 301, sometimes 302
+                        assert.strictEqual(response.statusCode.toString().substring(0, 2), '30');
+
+                        // https://www.google.com.br in Brasil, etc
+                        assert.ok(response.headers.location.indexOf('google.com') >= 0, response.headers.location);
+                    }).finally(function () {
+                        return api.del('/imposters');
+                    });
                 });
-            });
+            }
         });
     });
 });
