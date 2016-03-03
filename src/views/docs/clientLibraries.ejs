@@ -8,16 +8,44 @@ description = 'Native client libraries for your favorite language'
 <h1>Client Libraries</h1>
 
 <p>While mountebank speaks <a href='/docs/api/overview'>REST</a>, he truly loves your native language
-and has no desire to make you learn another language.  Though he wishes he had time to implement native
-bindings for you, time constraints have so far prevented him from doing so.  Nonetheless, if you have
-a native library you'd like others to be able to use, please send mountebank a note on the
-<a href='/support'>support page</a> and he will add it to the list below, or submit a pull request
-for this page.</p>
+and has no desire to make you learn another language.  If you have a native library you'd like others
+to be able to use, please send mountebank a note on the <a href='/support'>support page</a> or through
+a pull request to this page and he will add it to the list below.</p>
+
+<p>Some of these are still in their early stages.  Feel free to help the authors out ;></p>
 
 <div>
     <ul class='bullet-list'>
-      <li>Ruby: <a href='https://github.com/CoderKungfu/mountebank-gem'>mountebank-gem</a> (thanks Michael Cheng)</li>
+      <li>Ruby: <a href='https://github.com/CoderKungfu/mountebank-gem'>mountebank-gem</a> (Michael Cheng)</li>
+      <li>Python: <a href='https://pypi.python.org/pypi/mountebank-python/0.1.2'>mountebank-python</a> (Alex Holyoke)</li>
+      <li>Java: <a href='https://github.com/thejamesthomas/javabank'>javabank</a> (James Thomas)</li>
+	  <li>C#: <a href='https://github.com/mattherman/MbDotNet'>MbDotNet</a> (Matthew Herman)</li>
     </ul>
 </div>
+
+<h1>Build Plugins</h1>
+
+<p>Since <code>mb</code> is another process to manage during your build, having a plugin for your build tool is handy.
+If you have a plugin, please add it to this page.</p>
+
+<div>
+  <ul class='bullet-list'>
+    <li>Grunt: <a href='https://github.com/bbyars/mountebank-grunt'>grunt-mountebank</a> (Extracted from
+    the mountebank source)</li>
+  </ul>
+</div>
+
+<h2>Build Plugin Implementation Notes</h2>
+
+<p>As of v1.4.3, <code>mb</code> writes the pidfile (mb.pid by default, although it can be overridden on the
+command line) only after it has fully initialized, including binding to the socket and initializing any
+imposters passed in a config file.  You can use this fact to wait for the pidfile creation before returning
+from a build task to guarantee initialization before the next task runs.</p>
+
+<p>Also note that the command to actually run mountebank can vary depending on both the platform and the installation
+package.  To support all options, you will need to dynamically determine the executable command to run.</p>
+
+<p>See the <a href='https://github.com/bbyars/grunt-mountebank/blob/master/tasks/mb.js'>grunt-mountebank code</a>
+that mountebank uses for its build for an example.</p>
 
 <% include ../_footer %>

@@ -1,5 +1,10 @@
 'use strict';
 
+/**
+ * Represents an smtp imposter
+ * @module
+ */
+
 var AbstractServer = require('../abstractServer'),
     smtp = require('simplesmtp'),
     Q = require('q'),
@@ -38,6 +43,7 @@ function createServer () {
     };
 
     result.listen = function (port) {
+        /* eslint-disable no-underscore-dangle */
         var deferred = Q.defer();
         server.listen(port, function () { deferred.resolve(server.server.SMTPServer._server.address().port); });
         return deferred.promise;
@@ -46,6 +52,12 @@ function createServer () {
     return result;
 }
 
+/**
+ * Initializes the smtp protocol
+ * @param {boolean} recordRequests - The --mock command line parameter
+ * @param {boolean} debug - The --debug command line parameter
+ * @returns {Object}
+ */
 function initialize (recordRequests, debug) {
     var implementation = {
             protocolName: 'smtp',

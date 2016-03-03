@@ -45,7 +45,7 @@ var assert = require('assert'),
             });
 
             promiseIt('should allow a sequence of stubs as a circular buffer', function () {
-                var stub = { responses: [{ is: { statusCode: 400 }}, { is: { statusCode: 405 } }] },
+                var stub = { responses: [{ is: { statusCode: 400 } }, { is: { statusCode: 405 } }] },
                     request = { protocol: protocol, port: port, stubs: [stub], name: this.name };
 
                 return api.post('/imposters', request).then(function () {
@@ -122,7 +122,7 @@ var assert = require('assert'),
                 }).then(function (response) {
                     assert.strictEqual(response.statusCode, 200, 'should not have matched; missing header');
 
-                    var options = helpers.merge(spec, { headers: { 'X-Two': 'Testing', body: 'TEST' }});
+                    var options = helpers.merge(spec, { headers: { 'X-Two': 'Testing', body: 'TEST' } });
                     return client.responseFor(options);
                 }).then(function (response) {
                     assert.strictEqual(response.statusCode, 200, 'should not have matched; wrong value for header');
@@ -141,15 +141,15 @@ var assert = require('assert'),
 
             promiseIt('should correctly handle deepEquals object predicates', function () {
                 var stubWithEmptyObjectPredicate = {
-                        responses: [{ is: { body: 'first stub'} }],
+                        responses: [{ is: { body: 'first stub' } }],
                         predicates: [{ deepEquals: { query: {} } }]
                     },
                     stubWithPredicateKeywordInObject = {
-                        responses: [{ is: { body: 'second stub'} }],
+                        responses: [{ is: { body: 'second stub' } }],
                         predicates: [{ deepEquals: { query: { equals: 1 } } }]
                     },
                     stubWithTwoKeywordsInObject = {
-                        responses: [{ is: { body: 'third stub'} }],
+                        responses: [{ is: { body: 'third stub' } }],
                         predicates: [{ deepEquals: { query: { equals: 'true', contains: false } } }]
                     },
                     stubs = [stubWithEmptyObjectPredicate, stubWithPredicateKeywordInObject, stubWithTwoKeywordsInObject],
@@ -249,7 +249,7 @@ var assert = require('assert'),
                 });
             });
 
-            promiseIt('should support decorate functions that return a value by making that value the response', function () {
+            promiseIt('should support decorate functions that return a value', function () {
                 var decorator = function (request, response) {
                         var clonedResponse = JSON.parse(JSON.stringify(response));
                         clonedResponse.body = 'This is a clone';
@@ -274,7 +274,7 @@ var assert = require('assert'),
                 });
             });
 
-            promiseIt('should return an error if the decorate JavaScript is not well formed', function () {
+            promiseIt('should not validate the decorate JavaScript function', function () {
                 var decorator = "response.body = 'This should not work';",
                     stub = {
                         responses: [{
@@ -286,7 +286,7 @@ var assert = require('assert'),
                     request = { protocol: protocol, port: port, stubs: stubs, name: this.name };
 
                 return api.post('/imposters', request).then(function (response) {
-                    assert.strictEqual(response.statusCode, 400, JSON.stringify(response.body, null, 2));
+                    assert.strictEqual(response.statusCode, 201, JSON.stringify(response.body, null, 2));
                 }).finally(function () {
                     return api.del('/imposters');
                 });
@@ -302,6 +302,73 @@ var assert = require('assert'),
                     return client.responseFor({ method: 'GET', port: port, path: '/', mode: 'binary' });
                 }).then(function (response) {
                     assert.deepEqual(compatibility.bufferJSON(response.body), [0, 1, 2, 3]);
+                }).finally(function () {
+                    return api.del('/imposters');
+                });
+            });
+
+            promiseIt('should support JSON bodies', function () {
+                var stub = {
+                        responses: [
+                            {
+                                is: {
+                                    body: {
+                                        key: 'value',
+                                        sub: {
+                                            'string-key': 'value'
+                                        },
+                                        arr: [1, 2]
+                                    }
+                                }
+                            },
+                            {
+                                is: {
+                                    body: {
+                                        key: 'second request'
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    request = { protocol: protocol, port: port, stubs: [stub], name: this.name };
+
+                return api.post('/imposters', request).then(function (response) {
+                    assert.strictEqual(response.statusCode, 201);
+
+                    return client.get('/', port);
+                }).then(function (response) {
+                    assert.deepEqual(JSON.parse(response.body), {
+                        key: 'value',
+                        sub: {
+                            'string-key': 'value'
+                        },
+                        arr: [1, 2]
+                    });
+                    return client.get('/', port);
+                }).then(function (response) {
+                    assert.deepEqual(JSON.parse(response.body), { key: 'second request' });
+                }).finally(function () {
+                    return api.del('/imposters');
+                });
+            });
+
+            promiseIt('should support treating the body as a JSON object for predicate matching', function () {
+                var stub = {
+                        responses: [{ is: { body: 'SUCCESS' } }],
+                        predicates: [
+                            { equals: { body: { key: 'value' } } },
+                            { equals: { body: { arr: 3 } } },
+                            { deepEquals: { body: { key: 'value', arr: [2, 1, 3] } } },
+                            { matches: { body: { key: '^v' } } }
+                        ]
+                    },
+                    request = { protocol: protocol, port: port, stubs: [stub], name: this.name };
+
+                return api.post('/imposters', request).then(function (response) {
+                    assert.strictEqual(response.statusCode, 201);
+                    return client.post('/', '{"key": "value", "arr": [3,2,1]}', port);
+                }).then(function (response) {
+                    assert.strictEqual(response.body, 'SUCCESS');
                 }).finally(function () {
                     return api.del('/imposters');
                 });

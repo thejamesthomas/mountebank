@@ -130,7 +130,7 @@ Accept: application/json
 
 <code class='hidden' data-test-id='proxy example'
                      data-test-verify-step='7'
-                     data-test-ignore-lines='["[Dd]ate", "timestamp", "requestFrom", "Content-Length"]'>
+                     data-test-ignore-lines='["[Dd]ate", "timestamp", "requestFrom", "Content-Length", "_proxyResponseTime"]'>
 HTTP/1.1 200 OK
 Content-Type: application/json; charset=utf-8
 Content-Length: 7546
@@ -151,8 +151,8 @@ Connection: keep-alive
       },
       "headers": {
         "accept": "application/json",
-        "host": "localhost:6566",
-        "connection": "keep-alive"
+        "Host": "localhost:6566",
+        "Connection": "keep-alive"
       },
       "body": "",
       "timestamp": "2015-01-27T04:35:44.022Z"
@@ -166,8 +166,8 @@ Connection: keep-alive
       },
       "headers": {
         "accept": "application/json",
-        "host": "localhost:6566",
-        "connection": "keep-alive"
+        "Host": "localhost:6566",
+        "Connection": "keep-alive"
       },
       "body": "",
       "timestamp": "2015-01-27T04:35:44.032Z"
@@ -182,8 +182,8 @@ Connection: keep-alive
       },
       "headers": {
         "accept": "application/json",
-        "host": "localhost:6566",
-        "connection": "keep-alive"
+        "Host": "localhost:6566",
+        "Connection": "keep-alive"
       },
       "body": "",
       "timestamp": "2015-01-27T04:35:44.053Z"
@@ -198,8 +198,8 @@ Connection: keep-alive
       },
       "headers": {
         "accept": "application/json",
-        "host": "localhost:6566",
-        "connection": "keep-alive"
+        "Host": "localhost:6566",
+        "Connection": "keep-alive"
       },
       "body": "",
       "timestamp": "2015-01-27T04:35:44.065Z"
@@ -231,12 +231,13 @@ Connection: keep-alive
           "is": {
             "statusCode": 200,
             "headers": {
-              "connection": "close",
-              "date": "Mon, 27 Jan 2014 04:35:55 GMT",
-              "transfer-encoding": "chunked"
+              "Connection": "close",
+              "Date": "Mon, 27 Jan 2014 04:35:55 GMT",
+              "Transfer-Encoding": "chunked"
             },
             "body": "call 1",
-            "_mode": "text"
+            "_mode": "text",
+            "_proxyResponseTime": 3
           }
         }
       ]
@@ -266,12 +267,13 @@ Connection: keep-alive
           "is": {
             "statusCode": 200,
             "headers": {
-              "connection": "close",
-              "date": "Mon, 27 Jan 2014 04:35:55 GMT",
-              "transfer-encoding": "chunked"
+              "Connection": "close",
+              "Date": "Mon, 27 Jan 2014 04:35:55 GMT",
+              "Transfer-Encoding": "chunked"
             },
             "body": "call 2",
-            "_mode": "text"
+            "_mode": "text",
+            "_proxyResponseTime": 3
           }
         }
       ]
@@ -302,12 +304,13 @@ Connection: keep-alive
           "is": {
             "statusCode": 200,
             "headers": {
-              "connection": "close",
-              "date": "Mon, 27 Jan 2014 04:35:55 GMT",
-              "transfer-encoding": "chunked"
+              "Connection": "close",
+              "Date": "Mon, 27 Jan 2014 04:35:55 GMT",
+              "Transfer-Encoding": "chunked"
             },
             "body": "call 3",
-            "_mode": "text"
+            "_mode": "text",
+            "_proxyResponseTime": 3
           }
         }
       ],
@@ -324,17 +327,17 @@ Connection: keep-alive
             },
             "headers": {
               "accept": "application/json",
-              "host": "localhost:6566",
-              "connection": "keep-alive"
+              "Host": "localhost:6566",
+              "Connection": "keep-alive"
             },
             "body": ""
           },
           "response": {
             "statusCode": 200,
             "headers": {
-              "connection": "close",
-              "date": "Mon, 27 Jan 2014 04:35:55 GMT",
-              "transfer-encoding": "chunked"
+              "Connection": "close",
+              "Date": "Mon, 27 Jan 2014 04:35:55 GMT",
+              "Transfer-Encoding": "chunked"
             },
             "body": "call 3",
             "_mode": "text"
@@ -372,17 +375,17 @@ Connection: keep-alive
             },
             "headers": {
               "accept": "application/json",
-              "host": "localhost:6566",
-              "connection": "keep-alive"
+              "Host": "localhost:6566",
+              "Connection": "keep-alive"
             },
             "body": ""
           },
           "response": {
             "statusCode": 200,
             "headers": {
-              "connection": "close",
-              "date": "Mon, 27 Jan 2014 04:35:55 GMT",
-              "transfer-encoding": "chunked"
+              "Connection": "close",
+              "Date": "Mon, 27 Jan 2014 04:35:55 GMT",
+              "Transfer-Encoding": "chunked"
             },
             "body": "call 1",
             "_mode": "text"
@@ -399,17 +402,17 @@ Connection: keep-alive
             },
             "headers": {
               "accept": "application/json",
-              "host": "localhost:6566",
-              "connection": "keep-alive"
+              "Host": "localhost:6566",
+              "Connection": "keep-alive"
             },
             "body": ""
           },
           "response": {
             "statusCode": 200,
             "headers": {
-              "connection": "close",
-              "date": "Mon, 27 Jan 2014 04:35:55 GMT",
-              "transfer-encoding": "chunked"
+              "Connection": "close",
+              "Date": "Mon, 27 Jan 2014 04:35:55 GMT",
+              "Transfer-Encoding": "chunked"
             },
             "body": "call 2",
             "_mode": "text"
@@ -427,17 +430,17 @@ Connection: keep-alive
             },
             "headers": {
               "accept": "application/json",
-              "host": "localhost:6566",
-              "connection": "keep-alive"
+              "Host": "localhost:6566",
+              "Connection": "keep-alive"
             },
             "body": ""
           },
           "response": {
             "statusCode": 200,
             "headers": {
-              "connection": "close",
-              "date": "Mon, 27 Jan 2014 04:35:55 GMT",
-              "transfer-encoding": "chunked"
+              "Connection": "close",
+              "Date": "Mon, 27 Jan 2014 04:35:55 GMT",
+              "Transfer-Encoding": "chunked"
             },
             "body": "call 3",
             "_mode": "text"

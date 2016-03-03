@@ -1,10 +1,19 @@
 'use strict';
 
-var express = require('express'),
+/**
+ * The entry point for mountebank.  This module creates the mountebank server,
+ * configures all middleware, starts the logger, and manages all routing
+ * @module
+ */
+
+var Q = require('q'),
+    express = require('express'),
     cors = require('cors'),
     errorHandler = require('errorhandler'),
     path = require('path'),
+    fs = require('fs'),
     middleware = require('./util/middleware'),
+    compatibility = require('./util/compatibility'),
     HomeController = require('./controllers/homeController'),
     ImpostersController = require('./controllers/impostersController'),
     ImposterController = require('./controllers/imposterController'),
@@ -16,11 +25,34 @@ var express = require('express'),
     thisPackage = require('../package.json'),
     releases = require('../releases.json'),
     ScopedLogger = require('./util/scopedLogger'),
-    util = require('util');
+    util = require('util'),
+    helpers = require('./util/helpers');
 
+/**
+ * Patches needed to run with older versions of node
+ */
+compatibility.patchRawHeaders();
+
+function initializeLogfile (filename) {
+    // Ensure new logfile on startup so the /logs only shows for this process
+    var extension = path.extname(filename),
+        pattern = new RegExp(extension + '$'),
+        newFilename = filename.replace(pattern, '1' + extension);
+
+    if (fs.existsSync(filename)) {
+        fs.renameSync(filename, newFilename);
+    }
+}
+
+/**
+ * Creates the mountebank server
+ * @param {object} options - The command line options
+ * @returns {Object} An object with a close method to stop the server
+ */
 function create (options) {
-    var app = express(),
-        imposters = {},
+    var deferred = Q.defer(),
+        app = express(),
+        imposters = options.imposters || {},
         protocols = {
             tcp: require('./models/tcp/tcpServer').initialize(options.allowInjection, options.mock, options.debug),
             http: require('./models/http/httpServer').initialize(options.allowInjection, options.mock, options.debug),
@@ -36,14 +68,12 @@ function create (options) {
         logsController = LogsController.create(options.logfile),
         configController = ConfigController.create(thisPackage.version, options),
         feedController = FeedController.create(releases, options),
-        validateImposterExists = middleware.createImposterValidator(imposters),
-        welcome = util.format('mountebank v%s (node %s) now taking orders - point your browser to http://localhost:%s for help',
-            thisPackage.version, process.version, options.port);
-
+        validateImposterExists = middleware.createImposterValidator(imposters);
     logger.remove(logger.transports.Console);
     if (process.stdout.isTTY) {
         logger.add(logger.transports.Console, { colorize: true, level: options.loglevel });
     }
+    initializeLogfile(options.logfile);
     logger.add(logger.transports.File, {
         filename: options.logfile,
         timestamp: true,
@@ -60,7 +90,7 @@ function create (options) {
     app.use(express.static(path.join(__dirname, 'public')));
     app.use(express.static(path.join(__dirname, '../node_modules')));
     app.use(errorHandler());
-    if(options.allowCORS) {
+    if (options.allowCORS) {
         app.use(cors());
     }
 
@@ -90,7 +120,6 @@ function create (options) {
 
     [
         '/support',
-        '/contributing',
         '/license',
         '/faqs',
         '/thoughtworks',
@@ -101,9 +130,12 @@ function create (options) {
         '/docs/commandLine',
         '/docs/clientLibraries',
         '/docs/api/overview',
+        '/docs/api/contracts',
         '/docs/api/mocks',
         '/docs/api/stubs',
         '/docs/api/predicates',
+        '/docs/api/xpath',
+        '/docs/api/json',
         '/docs/api/proxies',
         '/docs/api/injection',
         '/docs/api/behaviors',
@@ -118,18 +150,44 @@ function create (options) {
         });
     });
 
-    app.listen(options.port);
+    var connections = {},
+        server = app.listen(options.port, function () {
+            logger.info(util.format('mountebank v%s now taking orders - point your browser to http://localhost:%s for help',
+                thisPackage.version, options.port));
+            logger.debug('config: ' + JSON.stringify({
+                options: options,
+                process: {
+                    nodeVersion: process.version,
+                    architecture: process.arch,
+                    platform: process.platform
+                }
+            }));
 
-    logger.info(welcome);
-    if (!process.stdout.isTTY) {
-        // needed for a number of functional tests (e.g. httpInjectionTest.js)
-        // that need to wait for a new mb process to start without a TTY
-        console.log(welcome);
-    }
+            server.on('connection', function (socket) {
+                var name = helpers.socketName(socket);
+                connections[name] = socket;
 
-    return {
-        close: function () { logger.info('Adios - see you soon?'); }
-    };
+                socket.on('close', function () {
+                    delete connections[name];
+                });
+            });
+
+            deferred.resolve({
+                close: function (callback) {
+                    server.close(function () {
+                        logger.info('Adios - see you soon?');
+                        callback();
+                    });
+
+                    // Force kill any open connections to prevent process hanging
+                    Object.keys(connections).forEach(function (socket) {
+                        connections[socket].destroy();
+                    });
+                }
+            });
+        });
+
+    return deferred.promise;
 }
 
 module.exports = {

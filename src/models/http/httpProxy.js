@@ -1,5 +1,10 @@
 'use strict';
 
+/**
+ * The proxy implementation for http/s imposters
+ * @module
+ */
+
 var http = require('http'),
     https = require('https'),
     url = require('url'),
@@ -10,6 +15,11 @@ var http = require('http'),
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
+/**
+ * Creates the proxy
+ * @param {Object} logger - The logger
+ * @returns {Object}
+ */
 function create (logger) {
 
     function toUrl (path, query) {
@@ -69,8 +79,17 @@ function create (logger) {
         });
     }
 
+    function headersFor (rawHeaders) {
+        var result = {};
+        for (var i = 0; i < rawHeaders.length; i += 2) {
+            result[rawHeaders[i]] = rawHeaders[i + 1];
+        }
+        return result;
+    }
+
     function proxy (proxiedRequest) {
-        var deferred = Q.defer();
+        var deferred = Q.defer(),
+            start = new Date();
 
         proxiedRequest.end();
 
@@ -87,9 +106,10 @@ function create (logger) {
                     encoding = mode === 'binary' ? 'base64' : 'utf8',
                     stubResponse = {
                         statusCode: response.statusCode,
-                        headers: response.headers,
+                        headers: headersFor(response.rawHeaders),
                         body: body.toString(encoding),
-                        _mode: mode
+                        _mode: mode,
+                        _proxyResponseTime: new Date() - start
                     };
                 deferred.resolve(stubResponse);
             });
@@ -98,6 +118,16 @@ function create (logger) {
         return deferred.promise;
     }
 
+    /**
+     * Proxies an http/s request to a destination
+     * @memberOf module:models/http/httpProxy#
+     * @param {string} proxyDestination - The base URL to proxy to, without a path (e.g. http://www.google.com)
+     * @param {Object} originalRequest - The original http/s request to forward on to proxyDestination
+     * @param {Object} options - Proxy options
+     * @param {string} [options.cert] - The certificate, in case the destination requires mutual authentication
+     * @param {string} [options.key] - The private key, in case the destination requires mutual authentication
+     * @returns {Object} - Promise resolving to the response
+     */
     function to (proxyDestination, originalRequest, options) {
 
         function log (direction, what) {
@@ -119,7 +149,7 @@ function create (logger) {
             if (error.code === 'ENOTFOUND') {
                 deferred.reject(errors.InvalidProxyError('Cannot resolve ' + JSON.stringify(proxyDestination)));
             }
-            else if (error.code === 'ECONNREFUSED') {
+            else if (error.code === 'ECONNREFUSED' || error.code === 'ECONNRESET') {
                 deferred.reject(errors.InvalidProxyError('Unable to connect to ' + JSON.stringify(proxyDestination)));
             }
             else {

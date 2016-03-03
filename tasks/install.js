@@ -113,7 +113,7 @@ module.exports = function (grunt) {
 
         run('sudo', ['dpkg', '-r', 'mountebank'], { cwd: testDir }).done(function () {
             if (fs.existsSync('/usr/local/bin/mb')) {
-                throw 'Uninstalling debian package did not remove /usr/local/bin/mb';
+                throw new Error('Uninstalling debian package did not remove /usr/local/bin/mb');
             }
             done();
         }, failTask('uninstall:deb'));
@@ -121,7 +121,7 @@ module.exports = function (grunt) {
 
     grunt.registerTask('install:rpm', 'Set test executable to mb installed in Red Hat package', function () {
         var done = this.async(),
-            rpm = util.format('mountebank-%s-1.x86_64.rpm', version);
+            rpm = util.format('mountebank-%s-1.x86_64.rpm', version.replace('-', '_'));
 
         fs.removeSync(testDir);
         fs.mkdirSync(testDir);
@@ -138,7 +138,7 @@ module.exports = function (grunt) {
 
         run('sudo', ['yum', 'remove', 'mountebank'], { cwd: testDir }).done(function () {
             if (fs.existsSync('/usr/local/bin/mb')) {
-                throw 'Uninstalling Red Hat package did not remove /usr/local/bin/mb';
+                throw new Error('Uninstalling Red Hat package did not remove /usr/local/bin/mb');
             }
             done();
         }, failTask('uninstall:rpm'));

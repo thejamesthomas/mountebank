@@ -7,31 +7,25 @@ description = 'Extending mountebank with custom JavaScript scripting'
 
 <h1>Injection</h1>
 
-<p>mountebank allows JavaScript injection for predicates and stub resolvers for situations
-where the built-in ones are not sufficient.  Injection only works if <code>mb</code> is
+<p>mountebank allows JavaScript injection for predicates and response types for situations
+where the built-in ones are not sufficient</p>
+
+<p class='warning-icon'>Injection only works if <code>mb</code> is
 run with the <code>--allowInjection</code> flag.</p>
 
 <p>Though mountebank has gone to some trouble to make injections as hassle-free as
 possible, there are a couple of things to be aware of.  First, when validating stub creation,
-mountebank actually dry runs a sample request in a sandbox.  Normally, this is
-side-effect free, as mountebank fakes out proxy calls and uses different state objects,
-but he can make no guarantees with injections.  The <code>state</code> variable described
-in the stub resolver section below will be untouched, but any environmental changes you
-make may persist to the actual stub calls.  The stub resolver example below shows an
-example of where this can trip you up.  If you need to work around the dry run, the
-test request passed in as the first parameter of the injected function will always
-have <code>isDryRun</code> set to <code>true</code> during the dry run.</p>
-
-<p>Second, all injections have full access to a node.js runtime environment, including the ability
-to <code>require</code> in different modules.  Of course, such power comes with its own
-challenges.  Though mountebank has gone to some effort to be robust in the face of errors,
-he is not as clever as you are.  With injections, you can crash mountebank.
-If you find yourself coding injections frequently because of missing functionality that you
-believe would make a useful resolver, mountebank humbly requests you to add a
+mountebank does not validate any injected functions.  Second, all injections have full access
+to a node.js runtime environment, including the ability to <code>require</code> in different
+modules.  Of course, such power comes with its own challenges, which leads us to third, with
+injections, you can crash mountebank.  Though mountebank has gone to some effort to be robust
+in the face of errors, he is not as clever as you are.  If you find yourself coding injections
+frequently because of missing functionality that you believe would be generally useful,
+mountebank humbly requests you to add a
 <a href='https://github.com/bbyars/mountebank/issues'>feature request.</a></p>
 
 <p>There are four options for injecting JavaScript into mountebank.  The first two,
-predicate injection and stub resolver injection, are described below.  The third,
+predicate injection and response injection, are described below.  The third,
 post-processing responses through the <code>decorate</code> behavior, is described
 on the <a href='/docs/api/behaviors'>behaviors</a> page.  Finally, determining the end
 of a TCP request is described on the <a href='/docs/protocols/tcp'>tcp</a> protocol page.</p>
@@ -64,7 +58,7 @@ Content-Type: application/json
     {
       "responses": [{ "is": { "statusCode": 400 } }],
       "predicates": [{
-        "inject": "function (request, logger) {\n\n    function hasXMLProlog () {\n        return request.body.indexOf('&lt;?xml') === 0;\n    }\n\n    if (request.headers['content-type'] === 'application/xml') {\n        return !hasXMLProlog();\n    }\n    else {\n        return hasXMLProlog();\n    }\n}"
+        "inject": "function (request, logger) {\n\n    function hasXMLProlog () {\n        return request.body.indexOf('&lt;?xml') === 0;\n    }\n\n    if (request.headers['Content-Type'] === 'application/xml') {\n        return !hasXMLProlog();\n    }\n    else {\n        return hasXMLProlog();\n    }\n}"
       }]
     }
   ]
@@ -72,7 +66,7 @@ Content-Type: application/json
 </code></pre>
 
 <p>Injections certainly don't help the readability of the JSON.  If you're loading imposters through a config file,
-look at the <code>inject</code> function supported in file templating with the <a href='/docs/commandLine#templating'>
+look at the <code>stringify</code> function supported in file templating with the <a href='/docs/commandLine#templating'>
 <code>--configfile</code></a> command line option to support storing the functions in a readable format.
 Let's look at our injected function appropriately formatted:</p>
 
@@ -83,7 +77,7 @@ function (request, logger) {
         return request.body.indexOf('&lt;?xml') === 0;
     }
 
-    if (request.headers['content-type'] === 'application/xml') {
+    if (request.headers['Content-Type'] === 'application/xml') {
         return !hasXMLProlog();
     }
     else {
@@ -170,7 +164,7 @@ parameters have not already been sent.</p>
 
 <p>The example below will use two imposters, an origin server and a server that proxies
 to the the origin server.  It would be better implemented using
-<a href='/docs/api/proxies'>a proxy resolver</a>, but has sufficient complexity to
+<a href='/docs/api/proxies'>a proxy response type</a>, but has sufficient complexity to
 demonstrate many nuances of injection.</p>
 
 <p>First we'll create the origin server at port 5555.  To help us keep track of the
@@ -309,10 +303,6 @@ function (request, state, logger, callback) {
 }
 </code></pre>
 
-<p>This is an example of where mountebank's dry run validation can trip you
-up.  If we had created the imposters in reverse order, this function would
-have failed, because it would not have been able to connect.</p>
-
 <p>Our first request should trigger a proxy call:</p>
 
 <pre><code data-test-id='predicate resolver example'
@@ -332,14 +322,9 @@ Date: Thu, 09 Jan 2014 02:30:31 GMT
 Transfer-Encoding: chunked
 
 {
-  "count": <strong class='highlight1'>3</strong>
+  "count": 1
 }
 </code></pre>
-
-<p>The origin unexpectedly returns 3.  This is an example where the dry
-run validation left behind some state in the environment.  If we had wanted
-to avoid this situation, we could have used the <code>isDryRun</code> field
-on the <code>request</code> parameter to avoid the proxy call during validation.</p>
 
 <p>A second call also proxies because the path is different.</p>
 
@@ -360,7 +345,7 @@ Date: Thu, 09 Jan 2014 02:30:31 GMT
 Transfer-Encoding: chunked
 
 {
-  "count": 4
+  "count": 2
 }
 </code></pre>
 
@@ -383,7 +368,7 @@ Date: Thu, 09 Jan 2014 02:30:31 GMT
 Transfer-Encoding: chunked
 
 {
-  "count": 3
+  "count": 1
 }
 </code></pre>
 
@@ -411,7 +396,7 @@ There have been 2 proxied calls
 cause unexpected results.</p>
 
 <p>This is the most complicated example in the documentation, and took
-mountebank some time to get working (these examples in the docs are executed
+mountebank some time to get it working (these examples in the docs are executed
 as part of the test suite).  This is appropriate since injection is the most
 complicated thing you can do in the tool.  When injection errors are detected,
 mountebank logs the full <code>eval</code>'d code, including the bits he's added

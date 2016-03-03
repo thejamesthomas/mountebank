@@ -1,10 +1,15 @@
 'use strict';
 
+/**
+ * A sample protocol implementation, used for demo purposes only
+ * @module
+ */
+
 var net = require('net'),
     Q = require('q'),
     baseLogger = require('winston'),
     ScopedLogger = require('../../util/scopedLogger'),
-    StubResolver = require('../stubResolver'),
+    ResponseResolver = require('../responseResolver'),
     StubRepository = require('../stubRepository'),
     util = require('util'),
     helpers = require('../../util/helpers'),
@@ -12,17 +17,22 @@ var net = require('net'),
     DryRunValidator = require('../dryRunValidator');
 
 /**
- * Used to fill in defaults for the response.  A user may set up a stub
+ * Used to fill in defaults for the response.  A user may set up a response
  * with not all fields filled in, and we use this function to fill in the rest
+ * @param {Object} response - The response returned by the stub
+ * @returns {Object} - The response we will send back
  */
-function postProcess (stub) {
+function postProcess (response) {
     return {
-        data: stub.data || 'foo'
+        data: response.data || 'foo'
     };
 }
 
 /**
  * Used to get consistent logging look & feel
+ * @param {number} port - The port for the imposter
+ * @param {string} [name] - The name of the imposter
+ * @returns {string}
  */
 function scopeFor (port, name) {
     var scope = util.format('foo:%s', port);
@@ -31,10 +41,13 @@ function scopeFor (port, name) {
     }
     return scope;
 }
+
 /**
  * Spins up a server listening on a socket
- * @param options - the JSON request body for the imposter create request
- * @param recordRequests - the --mock command line parameter
+ * @param {Object} options - the JSON request body for the imposter create request
+ * @param {boolean} recordRequests - The --mock command line parameter
+ * @param {boolean} debug - The --debug command line parameter
+ * @returns {Object} The protocol server implementation
  */
 function createServer (options, recordRequests, debug) {
             // This is an async operation, so we use a deferred
@@ -45,9 +58,9 @@ function createServer (options, recordRequests, debug) {
         logger = ScopedLogger.create(baseLogger, scopeFor(options.port)),
             // create the protocol-specific proxy (here we're reusing tcp's proxy)
         proxy = TcpProxy.create(logger, 'utf8'),
-            // create the stub resolver, which contains the strategies for resolving is, proxy, and inject stubs
+            // create the response resolver, which contains the strategies for resolving is, proxy, and inject stubs
             // the postProcess parameter is used to fill in defaults for the response that were not passed by the user
-        resolver = StubResolver.create(proxy, postProcess),
+        resolver = ResponseResolver.create(proxy, postProcess),
             // create the repository which matches the appropriate stub to respond with
         stubs = StubRepository.create(resolver, debug, 'utf8'),
             // and create the actual server using node.js's net module
@@ -105,7 +118,7 @@ function createServer (options, recordRequests, debug) {
             port: actualPort,
             close: function () {
                 server.close();
-                logger.info ('Ciao for now');
+                logger.info('Ciao for now');
             }
         });
     });
@@ -115,8 +128,10 @@ function createServer (options, recordRequests, debug) {
 
 /**
  * Creates the core protocol interface - all protocols must implement
- * @param allowInjection - represents the command line --allowInjection parameter
- * @param recordRequests - represents the command line --mock parameter
+ * @param {boolean} allowInjection - represents the command line --allowInjection parameter
+ * @param {boolean} recordRequests - represents the command line --mock parameter
+ * @param {boolean} debug - represents the command line --debug parameter
+ * @returns {Object} The server factory
  */
 function initialize (allowInjection, recordRequests, debug) {
     return {

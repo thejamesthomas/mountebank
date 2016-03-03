@@ -36,7 +36,7 @@ describe('dryRunValidator', function () {
         });
 
         promiseIt('should not be valid for a missing responses field', function () {
-            var request =  { stubs: [{}] },
+            var request = { stubs: [{}] },
                 validator = Validator.create({ StubRepository: StubRepository, testRequest: testRequest });
 
             return validator.validate(request).then(function (result) {
@@ -64,7 +64,7 @@ describe('dryRunValidator', function () {
         });
 
         promiseIt('should be valid for valid stub', function () {
-            var request =  { stubs: [{ responses: [{ is: { statusCode: 400 }  }] }] },
+            var request = { stubs: [{ responses: [{ is: { statusCode: 400 } }] }] },
                 validator = Validator.create({ StubRepository: StubRepository, testRequest: testRequest }),
                 logger = { error: mock() };
 
@@ -79,7 +79,7 @@ describe('dryRunValidator', function () {
         promiseIt('should be valid for a valid predicate', function () {
             var request = {
                     stubs: [{
-                        responses: [{ is: { body: 'test' }}],
+                        responses: [{ is: { body: 'test' } }],
                         predicates: [
                             { equals: { path: '/test' } },
                             { equals: { method: 'GET' } },
@@ -103,7 +103,7 @@ describe('dryRunValidator', function () {
             var request = {
                     stubs: [{
                         predicates: [{ inject: 'function () { return true; }' }],
-                        responses: [{ is: { body: 'Matched' }}]
+                        responses: [{ is: { body: 'Matched' } }]
                     }]
                 },
                 validator = Validator.create({
@@ -124,7 +124,7 @@ describe('dryRunValidator', function () {
         promiseIt('should be true for a well formed response inject if injections are allowed', function () {
             var request = {
                     stubs: [{
-                        responses: [{ inject: "function () { return {}; }" }]
+                        responses: [{ inject: 'function () { return {}; }' }]
                     }]
                 },
                 validator = Validator.create({
@@ -148,7 +148,7 @@ describe('dryRunValidator', function () {
                 },
                 request = {
                     stubs: [{
-                        responses: [{ is: { statusCode: 400 }, _behaviors: { decorate: decorator.toString() }  }]
+                        responses: [{ is: { statusCode: 400 }, _behaviors: { decorate: decorator.toString() } }]
                     }]
                 },
                 validator = Validator.create({
@@ -169,7 +169,7 @@ describe('dryRunValidator', function () {
         promiseIt('should not be valid for response injection if injections are disallowed', function () {
             var request = {
                     stubs: [{
-                        responses: [{ inject: "function () { return {}; }" }]
+                        responses: [{ inject: 'function () { return {}; }' }]
                     }]
                 },
                 validator = Validator.create({
@@ -194,7 +194,7 @@ describe('dryRunValidator', function () {
             var request = {
                     stubs: [{
                         predicates: [{ inject: 'function () { return true; }' }],
-                        responses: [{ is: { body: 'Matched' }}]
+                        responses: [{ is: { body: 'Matched' } }]
                     }]
                 },
                 validator = Validator.create({
@@ -221,7 +221,7 @@ describe('dryRunValidator', function () {
                 },
                 request = {
                     stubs: [{
-                        responses: [{ is: { statusCode: 400 }, _behaviors: { decorate: decorator.toString() }  }]
+                        responses: [{ is: { statusCode: 400 }, _behaviors: { decorate: decorator.toString() } }]
                     }]
                 },
                 validator = Validator.create({
@@ -263,7 +263,7 @@ describe('dryRunValidator', function () {
         promiseIt('should not be valid if any stub is invalid', function () {
             var request = {
                     stubs: [
-                        { responses: [{ is: { statusCode: 400 }  }] },
+                        { responses: [{ is: { statusCode: 400 } }] },
                         {}
                     ]
                 },
@@ -354,62 +354,6 @@ describe('dryRunValidator', function () {
             });
         });
 
-        promiseIt('should reject inject with no wrapper function', function () {
-            var request = {
-                    stubs: [{
-                        predicates: [{ inject: 'return true;' }],
-                        responses: [{ is: { body: 'Matched' } }]
-                    }]
-                },
-                validator = Validator.create({
-                    StubRepository: StubRepository,
-                    testRequest: testRequest,
-                    allowInjection: true
-                }),
-                logger = { warn: mock(), error: mock() };
-
-            return validator.validate(request, logger).then(function (result) {
-                assert.deepEqual(result, {
-                    isValid: false,
-                    errors: [{
-                        code: 'bad data',
-                        message: 'malformed stub request',
-                        data: 'invalid predicate injection',
-                        source: '(return true;)(scope, logger);'
-                    }]
-                });
-            });
-        });
-
-        promiseIt('should reject decorate with no wrapper function', function () {
-            var request = {
-                    stubs: [{
-                        responses: [{
-                            is: { body: 'Matched' },
-                            _behaviors: { decorate: 'response.body = "";' }
-                        }]
-                    }]
-                },
-                validator = Validator.create({
-                    StubRepository: StubRepository,
-                    testRequest: testRequest,
-                    allowInjection: true
-                }),
-                logger = { warn: mock(), error: mock() };
-
-            return validator.validate(request, logger).then(function (result) {
-                assert.deepEqual(result, {
-                    isValid: false,
-                    errors: [{
-                        code: 'invalid injection',
-                        message: 'invalid decorator injection',
-                        data: 'Unexpected token ;',
-                        source: '(response.body = "";)(request, response, logger);'
-                    }]
-                });
-            });
-        });
-
         promiseIt('should reject unrecognized response resolver', function () {
             var request = {
                     stubs: [{
@@ -424,7 +368,7 @@ describe('dryRunValidator', function () {
                     isValid: false,
                     errors: [{
                         code: 'bad data',
-                        message: 'unrecognized stub resolver',
+                        message: 'unrecognized response type',
                         source: request.stubs[0].responses[0]
                     }]
                 });
@@ -435,7 +379,7 @@ describe('dryRunValidator', function () {
             var request = {
                     stubs: [{
                         responses: [
-                            { is: { statusCode: 400 }  },
+                            { is: { statusCode: 400 } },
                             { invalid: true }
                         ]
                     }]
@@ -448,7 +392,7 @@ describe('dryRunValidator', function () {
                     isValid: false,
                     errors: [{
                         code: 'bad data',
-                        message: 'unrecognized stub resolver',
+                        message: 'unrecognized response type',
                         source: request.stubs[0].responses[1]
                     }]
                 });
@@ -470,7 +414,7 @@ describe('dryRunValidator', function () {
                     isValid: false,
                     errors: [{
                         code: 'bad data',
-                        message: 'unrecognized stub resolver',
+                        message: 'unrecognized response type',
                         source: request.stubs[0].responses[0]
                     }]
                 });
@@ -478,7 +422,7 @@ describe('dryRunValidator', function () {
         });
 
         promiseIt('should detect invalid wait behavior value', function () {
-            var request = { stubs: [{ responses: [{ is: { statusCode: 400 }, _behaviors: { wait: 'INVALID' }  }] }] },
+            var request = { stubs: [{ responses: [{ is: { statusCode: 400 }, _behaviors: { wait: 'INVALID' } }] }] },
                 validator = Validator.create({ StubRepository: StubRepository, testRequest: testRequest }),
                 logger = { error: mock() };
 

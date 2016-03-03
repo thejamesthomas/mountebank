@@ -15,7 +15,7 @@ var assert = require('assert'),
     describe(protocol + ' imposter', function () {
         if (isWindows) {
             // slower process startup time because Windows
-            this.timeout(timeout*2);
+            this.timeout(timeout * 2);
         }
         else {
             this.timeout(timeout);
@@ -24,7 +24,7 @@ var assert = require('assert'),
         describe('POST /imposters with injections', function () {
             promiseIt('should allow javascript predicate for matching', function () {
                 // note the lower-case keys for headers!!!
-                var fn = function (request) { return request.path === '/test';},
+                var fn = function (request) { return request.path === '/test'; },
                     stub = {
                         predicates: [{ inject: fn.toString() }],
                         responses: [{ is: { body: 'MATCHED' } }]
@@ -35,15 +35,15 @@ var assert = require('assert'),
                     assert.strictEqual(response.statusCode, 201, JSON.stringify(response.body));
 
                     var spec = {
-                            path: '/test?key=value',
-                            port: port,
-                            method: 'POST',
-                            headers: {
-                                'X-Test': 'test header',
-                                'Content-Type': 'text/plain'
-                            },
-                            body: 'BODY'
-                        };
+                        path: '/test?key=value',
+                        port: port,
+                        method: 'POST',
+                        headers: {
+                            'X-Test': 'test header',
+                            'Content-Type': 'text/plain'
+                        },
+                        body: 'BODY'
+                    };
                     return client.responseFor(spec);
                 }).then(function (response) {
                     assert.strictEqual(response.body, 'MATCHED');
@@ -52,7 +52,7 @@ var assert = require('assert'),
                 });
             });
 
-            promiseIt('should give a 400 on a bad predicate injection', function () {
+            promiseIt('should not validate a bad predicate injection', function () {
                 var stub = {
                         predicates: [{ inject: 'return true;' }],
                         responses: [{ is: { body: 'MATCHED' } }]
@@ -60,8 +60,7 @@ var assert = require('assert'),
                     request = { protocol: protocol, port: port, stubs: [stub], name: this.name };
 
                 return api.post('/imposters', request).then(function (response) {
-                    assert.strictEqual(response.statusCode, 400, JSON.stringify(response.body));
-                    assert.strictEqual(response.body.errors[0].data, 'invalid predicate injection');
+                    assert.strictEqual(response.statusCode, 201, JSON.stringify(response.body));
                 }).finally(function () {
                     return api.del('/imposters');
                 });
@@ -83,14 +82,13 @@ var assert = require('assert'),
                 });
             });
 
-            promiseIt('should give a 400 on a bad response injection', function () {
-                var fn = function () { throw('BOOM'); },
+            promiseIt('should not validate a bad response injection', function () {
+                var fn = function () { throw new Error('BOOM'); },
                     stub = { responses: [{ inject: fn.toString() }] },
                     request = { protocol: protocol, port: port, stubs: [stub], name: this.name };
 
                 return api.post('/imposters', request).then(function (response) {
-                    assert.strictEqual(response.statusCode, 400, JSON.stringify(response.body));
-                    assert.strictEqual(response.body.errors[0].message, 'invalid response injection');
+                    assert.strictEqual(response.statusCode, 201, JSON.stringify(response.body));
                 }).finally(function () {
                     return api.del('/imposters');
                 });
@@ -98,10 +96,10 @@ var assert = require('assert'),
 
             promiseIt('should allow javascript injection to keep state between requests', function () {
                 var fn = function (request, state) {
-                            if (!state.calls) { state.calls = 0; }
-                            state.calls += 1;
-                            return { body: state.calls.toString() };
-                        },
+                        if (!state.calls) { state.calls = 0; }
+                        state.calls += 1;
+                        return { body: state.calls.toString() };
+                    },
                     stub = { responses: [{ inject: fn.toString() }] },
                     request = { protocol: protocol, port: port, stubs: [stub], name: this.name };
 
@@ -146,36 +144,43 @@ var assert = require('assert'),
                                     path: request.path,
                                     headers: request.headers
                                 },
-                                httpRequest = http.request(options, function (response) {
-                                    response.body = '';
-                                    response.setEncoding('utf8');
-                                    response.on('data', function (chunk) {
-                                        response.body += chunk;
-                                    });
-                                    response.on('end', function () {
-                                        callback({
-                                            statusCode: response.statusCode,
-                                            headers: response.headers,
-                                            body: response.body
-                                        });
+                                httpRequest;
+
+                            options.headers.host = options.hostname;
+                            httpRequest = http.request(options, function (response) {
+                                response.body = '';
+                                response.setEncoding('utf8');
+                                response.on('data', function (chunk) {
+                                    response.body += chunk;
+                                });
+                                response.on('end', function () {
+                                    callback({
+                                        statusCode: response.statusCode,
+                                        headers: response.headers,
+                                        body: response.body
                                     });
                                 });
+                            });
                             httpRequest.end();
                             // No return value!!!
                         },
-                        stub = {responses: [{inject: fn.toString()}]},
-                        request = {protocol: protocol, port: port, stubs: [stub], name: this.name};
+                        stub = { responses: [{ inject: fn.toString() }] },
+                        request = { protocol: protocol, port: port, stubs: [stub], name: this.name };
 
                     return api.post('/imposters', request).then(function (response) {
                         assert.strictEqual(response.statusCode, 201, JSON.stringify(response.body));
 
-                        return client.get('', port);
+                        return client.get('/', port);
                     }).then(function (response) {
                         // sometimes 301, sometimes 302
-                        assert.strictEqual(response.statusCode.toString().substring(0, 2), '30');
-
-                        // https://www.google.com.br in Brasil, etc
-                        assert.ok(response.headers.location.indexOf('google.com') >= 0, response.headers.location);
+                        // 200 on new Mac with El Capitan?
+                        assert.ok(response.statusCode <= 301);
+                        if (response.statusCode === 200) {
+                            assert.ok(response.body.indexOf('google') >= 0, response.body);
+                        }
+                        else {
+                            assert.ok(response.headers.location.indexOf('google.com') >= 0, response.headers.location);
+                        }
                     }).finally(function () {
                         return api.del('/imposters');
                     });

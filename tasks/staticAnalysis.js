@@ -28,10 +28,9 @@ function forEachFileIn (dir, fileCallback, options) {
         if (!exclude(options.exclude, filePath)) {
             if (fs.lstatSync(filePath).isDirectory()) {
                 forEachFileIn(filePath, fileCallback, options);
-            } else {
-                if (include(options.filetype, filePath)) {
-                    fileCallback(filePath);
-                }
+            }
+            else if (include(options.filetype, filePath)) {
+                fileCallback(filePath);
             }
         }
     });
@@ -39,60 +38,21 @@ function forEachFileIn (dir, fileCallback, options) {
 
 module.exports = function (grunt) {
 
-    grunt.registerTask('wsCheck', 'Check for whitespace problems that make diffing harder', function () {
-        var errors = [],
-            wsCheck = function (file) {
-                var contents = fs.readFileSync(file, 'utf8'),
-                    lines = contents.split(os.EOL);
-
-                lines.forEach(function (line) {
-                    var trailingWhitespaceErrors = line.match(/ $/) || [],
-                        tabErrors = line.match(/^.*\t.*$/) || [];
-
-                    errors = errors.concat(trailingWhitespaceErrors.map(function () {
-                        return file + ' has trailing whitespace\n\t<<' + line + '>>';
-                    })).concat(tabErrors.map(function () {
-                        return file + ' has tabs instead of spaces\n\t<<' + line + '>>';
-                    }));
-                });
-
-                if (contents[contents.length-1] !== '\n') {
-                    errors = errors.concat(file + ' has no trailing newline');
-                }
-                else if (contents[contents.length-2] === os.EOL) {
-                    errors = errors.concat(file + ' has more than one trailing newline');
-                }
-            },
-            exclusions = ['node_modules', '.git', '.DS_Store', '.idea', 'images', 'dist', 'mountebank.iml', 'mb.log', '*.pid'];
-
-        forEachFileIn('.', wsCheck, { exclude: exclusions });
-
-        if (errors.length > 0) {
-            grunt.warn(errors.join(os.EOL));
-        }
-    });
-
-    grunt.registerTask('jsCheck', 'Run JavaScript checks not covered by jshint', function () {
+    grunt.registerTask('jsCheck', 'Run JavaScript checks not covered by eslint', function () {
         var errors = [],
             jsCheck = function (file) {
                 var contents = fs.readFileSync(file, 'utf8'),
                     lines = contents.split(os.EOL);
 
-                if (contents.indexOf("'use strict'") < 0) {
-                    errors = errors.concat(file + " does not start with 'use strict';");
-                }
                 lines.forEach(function (line) {
-                    var accidentalOnlyErrors = line.match(/(describe|[Ii]t)\.only\(/) || [],
-                        functionDeclarationErrors = line.match(/(function [A-Za-z]+\(|function\()/) || [];
+                    var accidentalOnlyErrors = line.match(/(describe|[Ii]t)\.only\(/) || [];
 
                     errors = errors.concat(accidentalOnlyErrors.map(function () {
                         return file + ' appears to have been left with a mocha .only() call\n\t' + line;
-                    })).concat(functionDeclarationErrors.map(function () {
-                        return file + ' uses function xyz() instead of function xyz () style for function definitions\n\t' + line;
                     }));
                 });
             },
-            exclusions = ['node_modules', 'dist', 'staticAnalysis.js', 'testHelpers.js', '*.pid'];
+            exclusions = ['node_modules', 'dist', 'staticAnalysis.js', 'testHelpers.js', '*.pid', 'jquery', 'docs'];
 
         forEachFileIn('.', jsCheck, { exclude: exclusions, filetype: '.js' });
 
@@ -116,7 +76,7 @@ module.exports = function (grunt) {
             },
             exclusions = ['node_modules', '.git', '.DS_Store', '.idea', 'images', 'dist', 'mountebank.iml', 'mb.log', '*.pid'],
             errors = [],
-            whitelist = ['npm', 'grunt', 'mocha', 'mocha-lcov-reporter', 'coveralls', 'grunt-cli'];
+            whitelist = ['grunt', 'mocha', 'istanbul', 'coveralls', 'grunt-cli', 'jsdoc', 'grunt-contrib-csslint'];
 
         dependencies.forEach(function (dependency) {
             usedCount[dependency] = 0;
@@ -138,10 +98,23 @@ module.exports = function (grunt) {
         }
     });
 
+    grunt.registerTask('coverage', 'Generate code coverage', function () {
+        var done = this.async(),
+            command = './node_modules/.bin/istanbul cover grunt mochaTest:unit';
+
+        exec(command, function (error, stdout, stderr) {
+            if (stdout) { console.log(stdout); }
+            if (stderr) { console.log(stderr); }
+            if (error) { throw error; }
+            console.log('Coverage report at coverage/lcov-report/index.html');
+            done();
+        });
+    });
+
     grunt.registerTask('coveralls', 'Send coverage output to coveralls.io', function () {
         var done = this.async(),
-            mocha = './node_modules/.bin/mocha --require blanket --reporter mocha-lcov-reporter test/**/*.js',
-            command = mocha + ' | ./node_modules/coveralls/bin/coveralls.js';
+            mocha = './node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha --report lcovonly test/**/*.js -- -R spec',
+            command = mocha + ' && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js';
 
         exec(command, function (error, stdout, stderr) {
             if (stdout) { console.log(stdout); }

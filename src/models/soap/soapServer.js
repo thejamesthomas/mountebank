@@ -1,10 +1,15 @@
 'use strict';
 
+/**
+ * Represents a soap imposter - Work in progress
+ * @module
+ */
+
 var http = require('http'),
     Q = require('q'),
     baseLogger = require('winston'),
     ScopedLogger = require('../../util/scopedLogger'),
-    StubResolver = require('../stubResolver'),
+    ResponseResolver = require('../responseResolver'),
     StubRepository = require('../stubRepository'),
     util = require('util'),
     helpers = require('../../util/helpers'),
@@ -70,8 +75,10 @@ function logConnection (logger, socket) {
 
 /**
  * Spins up a server listening on a socket
- * @param options - the JSON request body for the imposter create request
- * @param recordRequests - the --mock command line parameter
+ * @param {Object} options - the JSON request body for the imposter create request
+ * @param {boolean} recordRequests - the --mock command line parameter
+ * @param {boolean} debug - the --debug command line parameter
+ * @returns {Object} The promise resolving to the protocol interface
  */
 function createServer (options, recordRequests, debug) {
     var deferred = Q.defer(),
@@ -80,7 +87,7 @@ function createServer (options, recordRequests, debug) {
         proxy = HttpProxy.create(logger),
         wsdl = WSDL.parse(options.wsdl),
         postProcess = combinators.curry(createResponse, wsdl),
-        resolver = StubResolver.create(proxy, postProcess),
+        resolver = ResponseResolver.create(proxy, postProcess),
         stubs = StubRepository.create(resolver, debug, 'utf8'),
         server = http.createServer(),
         connectionLogger = combinators.curry(logConnection, logger);
@@ -112,9 +119,7 @@ function createServer (options, recordRequests, debug) {
             }).then(function (stubResponse) {
                 response.writeHead(stubResponse.http.statusCode, stubResponse.http.headers);
                 response.end(stubResponse.http.body, 'utf8');
-                return stubResponse;
-            }).done(function (response) {
-                logger.debug('%s <= %s', clientName, JSON.stringify(response));
+                logger.debug('%s <= %s', clientName, JSON.stringify(stubResponse));
             }, errorHandler);
         });
     });
@@ -141,7 +146,7 @@ function createServer (options, recordRequests, debug) {
             port: actualPort,
             close: function () {
                 server.close();
-                logger.info ('Ciao for now');
+                logger.info('Ciao for now');
             }
         });
     });
@@ -149,6 +154,15 @@ function createServer (options, recordRequests, debug) {
     return deferred.promise;
 }
 
+/**
+ * Initializes the soap protocol
+ * This implementation does not yet use module:models/abstractServer because I
+ * wanted to play around with a different abstraction
+ * @param {boolean} allowInjection - The --allowInjection command line parameter
+ * @param {boolean} recordRequests - The --mock command line parameter
+ * @param {boolean} debug - The --debug command line parameter
+ * @returns {Object} - The protocol implementation
+ */
 function initialize (allowInjection, recordRequests, debug) {
     return {
         name: 'soap',

@@ -6,7 +6,7 @@ var Q = require('q'),
 
 function responseFor (options) {
     if (!apiToken) {
-        throw 'APPVEYOR_API_TOKEN environment variable must be set';
+        throw new Error('APPVEYOR_API_TOKEN environment variable must be set');
     }
 
     var deferred = Q.defer();
@@ -63,7 +63,7 @@ function triggerBuild (commitId, version) {
             accountName: 'bbyars',
             projectSlug: 'mountebank',
             branch: 'master',
-            commitId: commitId.substring(0,8),
+            commitId: commitId.substring(0, 8),
             environmentVariables: {
                 MB_VERSION: version
             }
@@ -84,7 +84,7 @@ function getBuildStatus (buildNumber) {
         path: '/api/projects/bbyars/mountebank/build/' + buildNumber
     }).then(function (response) {
         if (response.statusCode !== 200) {
-            console.error('Status code of GET /api/projects/mountebank/build/' + buildNumber + ': ' + resopnse.statusCode);
+            console.error('Status code of GET /api/projects/mountebank/build/' + buildNumber + ': ' + response.statusCode);
             throw response.body;
         }
 

@@ -1,5 +1,13 @@
 'use strict';
 
+/**
+ * An imposter represents a protocol listening on a socket.  Most imposter
+ * functionality is in each particular protocol implementation.  This module
+ * exists as a bridge between the API and the protocol, mapping back to pretty
+ * JSON for the end user.
+ * @module
+ */
+
 var Q = require('q'),
     Domain = require('domain'),
     errors = require('../util/errors'),
@@ -19,6 +27,12 @@ function createErrorHandler (deferred) {
     };
 }
 
+/**
+ * Create the imposter
+ * @param {Object} Protocol - The protocol factory for creating servers of that protocol
+ * @param {Object} request - the parsed imposter JSON
+ * @returns {Object}
+ */
 function create (Protocol, request) {
     var deferred = Q.defer(),
         domain = Domain.create(),
@@ -69,9 +83,9 @@ function create (Protocol, request) {
                 // but it makes a nicer user experience for developers viewing the JSON to keep the most
                 // relevant information at the top
                 var result = {
-                        protocol: Protocol.name,
-                        port: server.port
-                    };
+                    protocol: Protocol.name,
+                    port: server.port
+                };
 
                 options = options || {};
 
@@ -79,7 +93,7 @@ function create (Protocol, request) {
                     addDetailsTo(result);
                 }
 
-                result._links = {self: {href: url}};
+                result._links = { self: { href: url } };
 
                 if (options.replayable) {
                     removeNonEssentialInformationFrom(result);

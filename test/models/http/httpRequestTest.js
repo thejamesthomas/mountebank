@@ -15,7 +15,8 @@ describe('HttpRequest', function () {
             request = inherit.from(events.EventEmitter, {
                 socket: { remoteAddress: '', remotePort: '' },
                 setEncoding: mock(),
-                url: 'http://localhost/'
+                url: 'http://localhost/',
+                rawHeaders: []
             });
             container = { request: request };
         });
@@ -23,23 +24,36 @@ describe('HttpRequest', function () {
         promiseIt('should set requestFrom from socket information', function () {
             request.socket = { remoteAddress: 'HOST', remotePort: 'PORT' };
 
-            var promise = httpRequest.createFrom(container).then(function (httpRequest) {
-                    assert.strictEqual(httpRequest.requestFrom, 'HOST:PORT');
-                });
+            var promise = httpRequest.createFrom(container).then(function (mbRequest) {
+                assert.strictEqual(mbRequest.requestFrom, 'HOST:PORT');
+            });
 
             request.emit('end');
 
             return promise;
         });
 
-        promiseIt('should echo method and headers from original request', function () {
+        promiseIt('should echo method from original request', function () {
             request.method = 'METHOD';
-            request.headers = 'HEADERS';
 
-            var promise = httpRequest.createFrom(container).then(function (httpRequest) {
-                    assert.strictEqual(httpRequest.method, 'METHOD');
-                    assert.strictEqual(httpRequest.headers, 'HEADERS');
+            var promise = httpRequest.createFrom(container).then(function (mbRequest) {
+                assert.strictEqual(mbRequest.method, 'METHOD');
+            });
+
+            request.emit('end');
+
+            return promise;
+        });
+
+        promiseIt('should transform rawHeaders from original request, keeping case and merging duplicates', function () {
+            request.rawHeaders = ['Accept', 'invalid', 'Accept', 'TEXT/html', 'Host', '127.0.0.1:8000'];
+
+            var promise = httpRequest.createFrom(container).then(function (mbRequest) {
+                assert.deepEqual(mbRequest.headers, {
+                    Accept: 'TEXT/html',
+                    Host: '127.0.0.1:8000'
                 });
+            });
 
             request.emit('end');
 
@@ -49,10 +63,10 @@ describe('HttpRequest', function () {
         promiseIt('should set path and query from request url', function () {
             request.url = 'http://localhost/path?key=value';
 
-            var promise = httpRequest.createFrom(container).then(function (httpRequest) {
-                    assert.strictEqual(httpRequest.path, '/path');
-                    assert.deepEqual(httpRequest.query, { key: 'value' });
-                });
+            var promise = httpRequest.createFrom(container).then(function (mbRequest) {
+                assert.strictEqual(mbRequest.path, '/path');
+                assert.deepEqual(mbRequest.query, { key: 'value' });
+            });
 
             request.emit('end');
 
@@ -60,9 +74,9 @@ describe('HttpRequest', function () {
         });
 
         promiseIt('should set body from data events', function () {
-            var promise = httpRequest.createFrom(container).then(function (httpRequest) {
-                    assert.strictEqual(httpRequest.body, '12');
-                });
+            var promise = httpRequest.createFrom(container).then(function (mbRequest) {
+                assert.strictEqual(mbRequest.body, '12');
+            });
 
             request.emit('data', '1');
             request.emit('data', '2');

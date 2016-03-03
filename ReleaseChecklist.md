@@ -8,10 +8,10 @@ Travis.ci does most of the heavy lifting.
 # Review major / minor version.
 # Update the releases.json
 # Change the views/releases/vx.x.x filename
-  * Update validatorTest
 # Make sure to use absolute URLs in views/releases so they work in aggregators, etc
 # commit
 # push
 # wait for the build to pass
 # tag: git tag -a vXX.YY.ZZ -m 'vXX.YY.ZZ release'
 # git push --tags
+# update version in package.json to avoid accidental version overwrite

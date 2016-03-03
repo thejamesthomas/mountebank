@@ -112,8 +112,8 @@ describe('predicates', function () {
         });
 
         it('should obey be case-insensitive except match by default', function () {
-            var predicate = { equals: { field: 'his is a test' }, except: '^t' },
-                request = { field: 'this is a test' };
+            var predicate = { equals: { field: 'is is a test' }, except: '^tH' },
+                request = { field: 'This is a test' };
             assert.ok(predicates.equals(predicate, request));
         });
 
@@ -124,13 +124,13 @@ describe('predicates', function () {
         });
 
         it('should return true if any value in a multi-value key is equal', function () {
-            var predicate = { equals: { query: { key: '234' } }},
+            var predicate = { equals: { query: { key: '234' } } },
                 request = { query: { key: ['123', '234'] } };
             assert.ok(predicates.equals(predicate, request));
         });
 
         it('should return false if no value in a multi-value key is equal', function () {
-            var predicate = { equals: { query: { key: '23' } }},
+            var predicate = { equals: { query: { key: '23' } } },
                 request = { query: { key: ['123', '234'] } };
             assert.ok(!predicates.equals(predicate, request));
         });
@@ -290,10 +290,12 @@ describe('predicates', function () {
             assert.ok(!predicates.deepEquals(predicate, request));
         });
 
-        it('should be false if values in a multi-value key are out of order', function () {
+        it('should be true if values in a multi-value key are out of order', function () {
+            // In cases where this comes up - querystrings and xpath selectors,
+            // order is irrelevant
             var predicate = { deepEquals: { query: { key: ['first', 'second'] } } },
                 request = { query: { key: ['second', 'first'] }, field: 'true' };
-            assert.ok(!predicates.deepEquals(predicate, request));
+            assert.ok(predicates.deepEquals(predicate, request));
         });
     });
 
@@ -365,19 +367,19 @@ describe('predicates', function () {
         });
 
         it('should return true if repeating query key contains value', function () {
-            var predicate = { contains: { query: { key: '123' } }},
+            var predicate = { contains: { query: { key: '123' } } },
                 request = { query: { key: ['123', '234'] } };
             assert.ok(predicates.contains(predicate, request));
         });
 
         it('should return true if repeating query key contains value with the right substring', function () {
-            var predicate = { contains: { query: { key: 'mid' } }},
+            var predicate = { contains: { query: { key: 'mid' } } },
                 request = { query: { key: ['begin', 'middle', 'end'] } };
             assert.ok(predicates.contains(predicate, request));
         });
 
         it('should return false if repeating query key does not contain value', function () {
-            var predicate = { contains: { query: { key: 'bid' } }},
+            var predicate = { contains: { query: { key: 'bid' } } },
                 request = { query: { key: ['begin', 'middle', 'end'] } };
             assert.ok(!predicates.contains(predicate, request));
         });
@@ -439,13 +441,13 @@ describe('predicates', function () {
         });
 
         it('should return true if repeating query key has value starting with string', function () {
-            var predicate = { startsWith: { query: { key: 'mid' } }},
+            var predicate = { startsWith: { query: { key: 'mid' } } },
                 request = { query: { key: ['begin', 'middle', 'end'] } };
             assert.ok(predicates.startsWith(predicate, request));
         });
 
         it('should return false if repeating query key does not have value starting with string', function () {
-            var predicate = { startsWith: { query: { key: 'egin' } }},
+            var predicate = { startsWith: { query: { key: 'egin' } } },
                 request = { query: { key: ['begin', 'middle', 'end'] } };
             assert.ok(!predicates.startsWith(predicate, request));
         });
@@ -495,25 +497,25 @@ describe('predicates', function () {
         });
 
         it('should return true if ends with binary sequence and encoding is base64', function () {
-            var predicate = { endsWith: {  field: new Buffer([2, 3, 4]).toString('base64') } },
+            var predicate = { endsWith: { field: new Buffer([2, 3, 4]).toString('base64') } },
                 request = { field: new Buffer([1, 2, 3, 4]).toString('base64') };
             assert.ok(predicates.endsWith(predicate, request, 'base64'));
         });
 
         it('should return false if does not end with binary sequence and encoding is base64', function () {
-            var predicate = { endsWith: {  field: new Buffer([1, 2, 3]).toString('base64') } },
+            var predicate = { endsWith: { field: new Buffer([1, 2, 3]).toString('base64') } },
                 request = { field: new Buffer([1, 2, 3, 4]).toString('base64') };
             assert.ok(!predicates.endsWith(predicate, request, 'base64'));
         });
 
         it('should return true if repeating query key has value ending with string', function () {
-            var predicate = { endsWith: { query: { key: 'gin' } }},
+            var predicate = { endsWith: { query: { key: 'gin' } } },
                 request = { query: { key: ['begin', 'middle', 'end'] } };
             assert.ok(predicates.endsWith(predicate, request));
         });
 
         it('should return false if repeating query key does not have value ending with string', function () {
-            var predicate = { endsWith: { query: { key: 'begi' } }},
+            var predicate = { endsWith: { query: { key: 'begi' } } },
                 request = { query: { key: ['begin', 'middle', 'end'] } };
             assert.ok(!predicates.endsWith(predicate, request));
         });
@@ -582,13 +584,13 @@ describe('predicates', function () {
         });
 
         it('should return true if repeating query key has value matching string', function () {
-            var predicate = { matches: { query: { key: 'iddle$' } }},
+            var predicate = { matches: { query: { key: 'iddle$' } } },
                 request = { query: { key: ['begin', 'middle', 'end'] } };
             assert.ok(predicates.matches(predicate, request));
         });
 
         it('should return false if repeating query key does not have value matching string', function () {
-            var predicate = { matches: { query: { key: '^iddle' } }},
+            var predicate = { matches: { query: { key: '^iddle' } } },
                 request = { query: { key: ['begin', 'middle', 'end'] } };
             assert.ok(!predicates.matches(predicate, request));
         });
@@ -751,6 +753,13 @@ describe('predicates', function () {
                 assert.ok(errorsLogged.indexOf('injection X=> Error: BOOM!!!') >= 0);
             }
         });
+
+        it('should not run injection during dry run validation', function () {
+            var fn = function () { throw new Error('BOOM!'); },
+                predicate = { inject: fn.toString() },
+                request = { isDryRun: true };
+            assert.ok(predicates.inject(predicate, request));
+        });
     });
 
     describe('#resolve', function () {
@@ -764,6 +773,562 @@ describe('predicates', function () {
             var predicate = { deepEquals: { query: {} } },
                 request = { query: {} };
             assert.ok(predicates.resolve(predicate, request));
+        });
+    });
+
+    describe('xpath', function () {
+        it('#equals should be false if field is not XML', function () {
+            var predicate = {
+                    equals: { field: 'VALUE' },
+                    xpath: { selector: '//title' }
+                },
+                request = { field: 'VALUE' };
+            assert.ok(!predicates.equals(predicate, request));
+        });
+
+        it('#equals should be true if value in provided xpath expression', function () {
+            var predicate = {
+                    equals: { field: 'VALUE' },
+                    xpath: { selector: '//title' }
+                },
+                request = { field: '<doc><title>value</title></doc>' };
+            assert.ok(predicates.equals(predicate, request));
+        });
+
+        it('#equals should be false if value provided xpath expression does not equal', function () {
+            var predicate = {
+                    equals: { field: 'NOT VALUE' },
+                    xpath: { selector: '//title' }
+                },
+                request = { field: '<doc><title>value</title></doc>' };
+            assert.ok(!predicates.equals(predicate, request));
+        });
+
+        it('#equals should use case-insensitive xpath selector by default', function () {
+            var predicate = {
+                    equals: { field: 'VALUE' },
+                    xpath: { selector: '//Title' }
+                },
+                request = { field: '<DOC><TITLE>value</TITLE></DOC>' };
+            assert.ok(predicates.equals(predicate, request));
+        });
+
+        it('#equals should not equal if case-sensitive xpath selector does not match', function () {
+            var predicate = {
+                    equals: { field: 'value' },
+                    xpath: { selector: '//Title' },
+                    caseSensitive: true
+                },
+                request = { field: '<DOC><TITLE>value</TITLE></DOC>' };
+            assert.ok(!predicates.equals(predicate, request));
+        });
+
+        it('#equals should equal if case-sensitive xpath selector matches', function () {
+            var predicate = {
+                    equals: { field: 'value' },
+                    xpath: { selector: '//Title' },
+                    caseSensitive: true
+                },
+                request = { field: '<Doc><Title>value</Title></Doc>' };
+            assert.ok(predicates.equals(predicate, request));
+        });
+
+        it('#equals should equal if case-sensitive xpath selector matches, stripping out the exception', function () {
+            var predicate = {
+                    equals: { field: 've' },
+                    xpath: { selector: '//Title' },
+                    caseSensitive: true,
+                    except: 'alu'
+                },
+                request = { field: '<Doc><Title>value</Title></Doc>' };
+            assert.ok(predicates.equals(predicate, request));
+        });
+
+        it('#equals should not equal if case-sensitive xpath selector matches, but stripped values differ', function () {
+            var predicate = {
+                    equals: { field: 'v' },
+                    xpath: { selector: '//Title' },
+                    caseSensitive: true,
+                    except: 'alu'
+                },
+                request = { field: '<Doc><Title>value</Title></Doc>' };
+            assert.ok(!predicates.equals(predicate, request));
+        });
+
+        it('#deepEquals should be false if field is not XML and xpath selector used', function () {
+            var predicate = {
+                    deepEquals: { field: 'VALUE' },
+                    xpath: { selector: '//title' }
+                },
+                request = { field: 'VALUE' };
+            assert.ok(!predicates.deepEquals(predicate, request));
+        });
+
+        it('#deepEquals should equal value in provided xpath attribute', function () {
+            var predicate = {
+                    deepEquals: { field: 'VALUE' },
+                    xpath: { selector: '//title/@href' }
+                },
+                request = { field: '<doc><title href="value">text</title></doc>' };
+            assert.ok(predicates.deepEquals(predicate, request));
+        });
+
+        it('#deepEquals should be false if value in provided xpath attribute expression does not equal', function () {
+            var predicate = {
+                    deepEquals: { field: 'NOT VALUE' },
+                    xpath: { selector: '//title/@attr' }
+                },
+                request = { field: '<doc><title attr="value">text</title></doc>' };
+            assert.ok(!predicates.deepEquals(predicate, request));
+        });
+
+        it('#deepEquals should be true if all values in a multi-value selector match are present', function () {
+            var predicate = {
+                    deepEquals: { field: ['first', 'second'] },
+                    xpath: { selector: '//title' }
+                },
+                request = { field: '<doc><title>first</title><title>second</title></doc>' };
+            assert.ok(predicates.deepEquals(predicate, request));
+        });
+
+        it('#deepEquals should be false if some values in a multi-value selector match are missing', function () {
+            var predicate = {
+                    deepEquals: { field: ['first', 'second'] },
+                    xpath: { selector: '//title' }
+                },
+                request = { field: '<doc><title>first</title><title>second</title><title>third</title></doc>' };
+            assert.ok(!predicates.deepEquals(predicate, request));
+        });
+
+        it('#deepEquals should be true if values in a multi-value selector match are out of order', function () {
+            var predicate = {
+                    deepEquals: { field: ['first', 'second'] },
+                    xpath: { selector: '//title' }
+                },
+                request = { field: '<doc><title>second</title><title>first</title></doc>' };
+            assert.ok(predicates.deepEquals(predicate, request));
+        });
+
+        it('#contains should be true if direct text value contains predicate', function () {
+            var predicate = {
+                    contains: { field: 'value' },
+                    xpath: { selector: '//title/text()' }
+                },
+                request = { field: '<doc><title>this is a value</title>' };
+            assert.ok(predicates.contains(predicate, request));
+        });
+
+        it('#contains should be false if direct text value does not contain predicate', function () {
+            var predicate = {
+                    contains: { field: 'VALUE' },
+                    xpath: { selector: '//title/text()' },
+                    caseSensitive: true },
+                request = { field: '<doc><title>this is a value</title>' };
+            assert.ok(!predicates.contains(predicate, request));
+        });
+
+        it('#startsWith should be true if direct namespaced xpath selection starts with value', function () {
+            var predicate = {
+                    startsWith: { field: 'Harry' },
+                    xpath: { selector: '//*[local-name(.)="title" and namespace-uri(.)="myns"]' }
+                },
+                request = { field: '<book><title xmlns="myns">Harry Potter</title></book>' };
+            assert.ok(predicates.startsWith(predicate, request));
+        });
+
+        it('#startsWith should be false if direct namespaced xpath selection does not start with value', function () {
+            var predicate = {
+                    startsWith: { field: 'Potter' },
+                    xpath: { selector: '//*[local-name(.)="title" and namespace-uri(.)="myns"]' }
+                },
+                request = { field: '<book><title xmlns="myns">Harry Potter</title></book>' };
+            assert.ok(!predicates.startsWith(predicate, request));
+        });
+
+        it('#startsWith should be false if direct namespaced xpath selection does not match', function () {
+            var predicate = {
+                    startsWith: { field: 'Harry' },
+                    xpath: { selector: '//*[local-name(.)="title" and namespace-uri(.)="myns"]' }
+                },
+                request = { field: '<book><title>Harry Potter</title></book>' };
+            assert.ok(!predicates.startsWith(predicate, request));
+        });
+
+        it('#endsWith should be true if aliased namespace match endsWith predicate', function () {
+            var predicate = {
+                    endsWith: { field: 'Potter' },
+                    xpath: {
+                        selector: '//bookml:title/text()',
+                        ns: {
+                            bookml: 'http://example.com/book'
+                        }
+                    }
+                },
+                request = { field: '<book xmlns:bookml="http://example.com/book"><bookml:title>Harry Potter</bookml:title></book>' };
+            assert.ok(predicates.endsWith(predicate, request));
+        });
+
+        it('#endsWith should be false if aliased namespace match does not end with predicate', function () {
+            var predicate = {
+                    endsWith: { field: 'Harry' },
+                    xpath: {
+                        selector: '//bookml:title/text()',
+                        ns: {
+                            bookml: 'http://example.com/book'
+                        }
+                    }
+                },
+                request = { field: '<book xmlns:bookml="http://example.com/book"><bookml:title>Harry Potter</bookml:title></book>' };
+            assert.ok(!predicates.endsWith(predicate, request));
+        });
+
+        it('#equals should be true if any matched node equals the predicate value', function () {
+            var predicate = {
+                    equals: { field: 'Second' },
+                    xpath: {
+                        selector: '//a:child',
+                        ns: {
+                            a: 'http://example.com/a',
+                            b: 'http://example.com/b'
+                        }
+                    }
+                },
+                request = {
+                    field: '<root xmlns:thisa="http://example.com/a" xmlns:thisb="http://example.com/b">' +
+                           '  <thisa:child>First</thisa:child>' +
+                           '  <thisa:child>Second</thisa:child>' +
+                           '  <thisa:child>Third</thisa:child>' +
+                           '</root>'
+                };
+            assert.ok(predicates.equals(predicate, request));
+        });
+
+        it('#equals should be false if no nodes match the selector', function () {
+            // despite namespace aliases matching, urls do not
+            var predicate = {
+                    equals: { field: 'Second' },
+                    xpath: {
+                        selector: '//a:child',
+                        ns: {
+                            a: 'http://example.com/a',
+                            b: 'http://example.com/b'
+                        }
+                    }
+                },
+                request = {
+                    field: '<root xmlns:b="http://example.com/a" xmlns:a="http://example.com/b">' +
+                    '  <a:child>First</a:child>' +
+                    '  <a:child>Second</a:child>' +
+                    '  <a:child>Third</a:child>' +
+                    '</root>'
+                };
+            assert.ok(!predicates.equals(predicate, request));
+        });
+
+        it('#matches should be false if field is not XML', function () {
+            var predicate = {
+                    matches: { field: 'VALUE' },
+                    xpath: { selector: '//title' }
+                },
+                request = { field: 'VALUE' };
+            assert.ok(!predicates.matches(predicate, request));
+        });
+
+        it('#matches should be true if selected value matches regex', function () {
+            var predicate = {
+                    matches: { field: '^v' },
+                    xpath: { selector: '//title' }
+                },
+                request = { field: '<doc><title>value</title></doc>' };
+            assert.ok(predicates.matches(predicate, request));
+        });
+
+        it('#matches should be false if selected value does not match regex', function () {
+            var predicate = {
+                    matches: { field: 'v$' },
+                    xpath: { selector: '//title' }
+                },
+                request = { field: '<doc><title>value</title></doc>' };
+            assert.ok(!predicates.matches(predicate, request));
+        });
+
+        it('should throw an error if encoding is base64', function () {
+            try {
+                var predicate = {
+                        equals: { field: 'dGVzdA==' },
+                        xpath: { selector: 'dGVzdA==' }
+                    },
+                    request = { field: 'dGVzdA==' };
+                predicates.equals(predicate, request, 'base64');
+                assert.fail('should have thrown');
+            }
+            catch (error) {
+                assert.strictEqual(error.code, 'bad data');
+                assert.strictEqual(error.message, 'the xpath predicate parameter is not allowed in binary mode');
+            }
+        });
+
+        it('#exists should be true if xpath selector has at least one result', function () {
+            var predicate = {
+                    exists: { field: true },
+                    xpath: { selector: '//title' }
+                },
+                request = { field: '<doc><title>value</title></doc>' };
+            assert.ok(predicates.exists(predicate, request));
+        });
+
+        it('#exists should be false if xpath selector does not match', function () {
+            var predicate = {
+                    exists: { field: true },
+                    xpath: { selector: '//title' }
+                },
+                request = { field: '<doc><summary>value</summary></doc>' };
+            assert.ok(!predicates.exists(predicate, request));
+        });
+
+        it('should throw error if xpath selector is malformed', function () {
+            try {
+                var predicate = {
+                        equals: { field: 'value' },
+                        xpath: { selector: '=*INVALID*=' }
+                    },
+                    request = { field: '<doc><title>value</title></doc>' };
+                predicates.equals(predicate, request);
+                assert.fail('should have thrown');
+            }
+            catch (error) {
+                assert.strictEqual(error.code, 'bad data');
+                assert.strictEqual(error.message, 'malformed xpath predicate selector');
+            }
+        });
+
+        it('should accept numbers using count()', function () {
+            var predicate = {
+                    equals: { field: 2 },
+                    xpath: { selector: 'count(//title)' }
+                },
+                request = { field: '<doc><title>first</title><title>second</title></doc>' };
+            assert.ok(predicates.equals(predicate, request));
+        });
+
+        it('should accept booleans returning false', function () {
+            var predicate = {
+                    equals: { field: false },
+                    xpath: { selector: 'boolean(//title)' }
+                },
+                request = { field: '<doc></doc>' };
+            assert.ok(predicates.equals(predicate, request));
+        });
+    });
+
+    describe('treating strings as json', function () {
+        it('#equals should be false if field is not XML', function () {
+            var predicate = { equals: { field: { key: 'VALUE' } } },
+                request = { field: 'KEY: VALUE' };
+            assert.ok(!predicates.equals(predicate, request));
+        });
+
+        it('#equals should be true if JSON string value equals JSON predicate', function () {
+            var predicate = { equals: { field: { key: 'VALUE' } } },
+                request = { field: '{ "key": "VALUE" }' };
+            assert.ok(predicates.equals(predicate, request));
+        });
+
+        it('#equals should be false if JSON string value does not equal JSON predicate', function () {
+            var predicate = { equals: { field: { key: 'VALUE' } } },
+                request = { field: 'Not value' };
+            assert.ok(!predicates.equals(predicate, request));
+        });
+
+        it('#equals should be true if JSON string value equals JSON predicate except for case', function () {
+            var predicate = { equals: { field: { KEY: 'value' } } },
+                request = { field: '{ "key": "VALUE" }' };
+            assert.ok(predicates.equals(predicate, request));
+        });
+
+        it('#equals should not be true if JSON string value case different and caseSensitive is true', function () {
+            var predicate = {
+                    equals: { field: { KEY: 'value' } },
+                    caseSensitive: true
+                },
+                request = { field: '{ "key": "VALUE" }' };
+            assert.ok(!predicates.equals(predicate, request));
+        });
+
+        it('#equals should equal if case-sensitive predicate matches, stripping out the exception', function () {
+            var predicate = {
+                    equals: { field: { key: 'VE' } },
+                    caseSensitive: true,
+                    except: 'ALU'
+                },
+                request = { field: '{ "key": "VALUE" }' };
+            assert.ok(predicates.equals(predicate, request));
+        });
+
+        it('#equals should not equal if case-sensitive predicate matches, but stripped values differ', function () {
+            var predicate = {
+                    equals: { field: { key: 'V' } },
+                    caseSensitive: true,
+                    except: 'ALU'
+                },
+                request = { field: '{ "key": "VALUE" }' };
+            assert.ok(!predicates.equals(predicate, request));
+        });
+
+        it('#deepEquals should be false if field is not JSON and JSON predicate used', function () {
+            var predicate = { deepEquals: { field: { key: 'VALUE' } } },
+                request = { field: '"key": "VALUE"' };
+            assert.ok(!predicates.deepEquals(predicate, request));
+        });
+
+        it('#deepEquals should equal value in provided JSON attribute', function () {
+            var predicate = { deepEquals: { field: { key: 'VALUE' } } },
+                request = { field: '{"key": "VALUE"}' };
+            assert.ok(predicates.deepEquals(predicate, request));
+        });
+
+        it('#deepEquals should be false if value in provided JSON predicate does not equal', function () {
+            var predicate = { deepEquals: { field: { key: 'test' } } },
+                request = { field: '{"key": "VALUE"}' };
+            assert.ok(!predicates.deepEquals(predicate, request));
+        });
+
+        it('#deepEquals should be true if all values in a JSON predicate match are present', function () {
+            var predicate = {
+                    deepEquals: {
+                        field: {
+                            key: 'value',
+                            outer: { inner: 'value' }
+                        }
+                    }
+                },
+                request = { field: '{"key": "VALUE", "outer": { "inner": "value" }}' };
+            assert.ok(predicates.deepEquals(predicate, request));
+        });
+
+        it('#deepEquals should be false if some values in a multi-value JSON predicate match are missing', function () {
+            var predicate = {
+                    deepEquals: {
+                        field: {
+                            key: 'value',
+                            outer: { inner: 'value' }
+                        }
+                    }
+                },
+                request = { field: '{"outer": { "inner": "value" }}' };
+            assert.ok(!predicates.deepEquals(predicate, request));
+        });
+
+        it('#deepEquals should be true if all array values in a JSON predicate match are present regardless of order', function () {
+            var predicate = { deepEquals: { field: { key: [2, 1, 3] } } },
+                request = { field: '{"key": [3, 1, 2]}' };
+            assert.ok(predicates.deepEquals(predicate, request));
+        });
+
+        it('#contains should be true if JSON value contains predicate', function () {
+            var predicate = { contains: { field: { key: 'alu' } } },
+                request = { field: '{ "key": "VALUE" }' };
+            assert.ok(predicates.contains(predicate, request));
+        });
+
+        it('#contains should be false if JSON value does not contain predicate', function () {
+            var predicate = {
+                    contains: { field: { key: 'VALUE' } },
+                    caseSensitive: true
+                },
+                request = { field: '{"key": "test"}' };
+            assert.ok(!predicates.contains(predicate, request));
+        });
+
+        it('#startsWith should be true if JSON field starts with value', function () {
+            var predicate = { startsWith: { field: { key: 'Harry' } } },
+                request = { field: '{"key": "Harry Potter"}' };
+            assert.ok(predicates.startsWith(predicate, request));
+        });
+
+        it('#startsWith should be false if JSON field does not start with value', function () {
+            var predicate = { startsWith: { field: { key: 'Potter' } } },
+                request = { field: '{"key":"Harry Potter"}' };
+            assert.ok(!predicates.startsWith(predicate, request));
+        });
+
+        it('#endsWith should be true if JSON field ends with predicate', function () {
+            var predicate = { endsWith: { field: { key: 'Potter' } } },
+                request = { field: '{"key": "Harry Potter"}' };
+            assert.ok(predicates.endsWith(predicate, request));
+        });
+
+        it('#endsWith should be false if JSON field does not end with predicate', function () {
+            var predicate = { endsWith: { field: { key: 'Harry' } } },
+                request = { field: '{"key": "Harry Potter"}' };
+            assert.ok(!predicates.endsWith(predicate, request));
+        });
+
+        it('#equals should be true if any array element equals the predicate value', function () {
+            var predicate = { equals: { field: { key: 'Second' } } },
+                request = { field: '{"key": ["First", "Second", "Third"]}' };
+            assert.ok(predicates.equals(predicate, request));
+        });
+
+        it('#equals should be false if no array elements match the predicate value', function () {
+            // despite namespace aliases matching, urls do not
+            var predicate = { equals: { field: { key: 'Second' } } },
+                request = { field: '{"key": ["first", "third"]}' };
+            assert.ok(!predicates.equals(predicate, request));
+        });
+
+        it('#matches should be false if field is not JSON', function () {
+            var predicate = { matches: { field: { key: 'VALUE' } } },
+                request = { field: '"key": "value"' };
+            assert.ok(!predicates.matches(predicate, request));
+        });
+
+        it('#matches should be true if selected JSON value matches regex', function () {
+            var predicate = { matches: { field: { key: '^v' } } },
+                request = { field: '{"key": "Value"}' };
+            assert.ok(predicates.matches(predicate, request));
+        });
+
+        it('#matches should be false if selected JSON value does not match regex', function () {
+            var predicate = { matches: { field: { key: 'v$' } } },
+                request = { field: '{"key":"value"}' };
+            assert.ok(!predicates.matches(predicate, request));
+        });
+
+        it('#exists should be true if JSON key exists', function () {
+            var predicate = { exists: { field: { key: true } } },
+                request = { field: '{"key":"exists"}' };
+            assert.ok(predicates.exists(predicate, request));
+        });
+
+        it('#exists should be false if JSON key does not exist', function () {
+            var predicate = { exists: { field: { key: true } } },
+                request = { field: '{}' };
+            assert.ok(!predicates.exists(predicate, request));
+        });
+
+        it('#equals should be true if matches key for any object in array', function () {
+            var predicate = { equals: { examples: { key: 'third' } } },
+                request = { examples: [{ key: 'first' }, { different: true }, { key: 'third' }] };
+            assert.ok(predicates.equals(predicate, request));
+        });
+
+        it('#equals should be false if all keys in an array do not match', function () {
+            var predicate = { equals: { examples: { key: true } } },
+                request = { examples: [{ key: 'first' }, { different: true }, { key: 'third' }] };
+            assert.ok(!predicates.equals(predicate, request));
+        });
+
+        it('#deepEquals should be true if all objects in an array have fields equaling predicate', function () {
+            var predicate = { deepEquals: { examples: [{ key: 'first' }, { key: 'second' }] } },
+                request = { examples: [{ key: 'first' }, { key: 'second' }] };
+            assert.ok(predicates.deepEquals(predicate, request));
+        });
+
+        it('#deepEquals should be false if missing an object in an array in request', function () {
+            var predicate = { deepEquals: { examples: [{ key: 'first' }, { key: 'second' }] } },
+                request = { examples: [{ key: 'first' }, { different: true }, { key: 'second' }] };
+            assert.ok(!predicates.deepEquals(predicate, request));
         });
     });
 });

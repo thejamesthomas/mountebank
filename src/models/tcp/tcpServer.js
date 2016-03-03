@@ -1,22 +1,27 @@
 'use strict';
 
+/**
+ * Represents a tcp imposter
+ * @module
+ */
+
 var AbstractServer = require('../abstractServer'),
     net = require('net'),
     Q = require('q'),
-    logger = require('winston'),
+    winston = require('winston'),
     inherit = require('../../util/inherit'),
     combinators = require('../../util/combinators'),
     helpers = require('../../util/helpers'),
     TcpProxy = require('./tcpProxy'),
     TcpValidator = require('./tcpValidator'),
-    StubResolver = require('../stubResolver'),
+    ResponseResolver = require('../responseResolver'),
     StubRepository = require('../stubRepository'),
     events = require('events'),
     TcpRequest = require('./tcpRequest');
 
-function postProcess (stub) {
+function postProcess (response) {
     return {
-        data: stub.data || ''
+        data: response.data || ''
     };
 }
 
@@ -27,7 +32,7 @@ function createServer (logger, options) {
             return Buffer.isBuffer(data) ? data : new Buffer(data, encoding);
         },
         proxy = TcpProxy.create(logger, encoding),
-        resolver = StubResolver.create(proxy, postProcess),
+        resolver = ResponseResolver.create(proxy, postProcess),
         stubs = StubRepository.create(resolver, options.debug, encoding),
         result = inherit.from(events.EventEmitter, {
             errorHandler: function (error, container) {
@@ -66,7 +71,6 @@ function createServer (logger, options) {
         server = net.createServer();
 
     function isEndOfRequest (requestData) {
-        /* jshint evil: true */
         if (!options.endOfRequestResolver || !options.endOfRequestResolver.inject) {
             return true;
         }
@@ -81,9 +85,9 @@ function createServer (logger, options) {
             return eval(injected);
         }
         catch (error) {
-            logger.error("injection X=> " + error);
-            logger.error("    full source: " + JSON.stringify(injected));
-            logger.error("    requestData: " + JSON.stringify(requestData));
+            logger.error('injection X=> ' + error);
+            logger.error('    full source: ' + JSON.stringify(injected));
+            logger.error('    requestData: ' + JSON.stringify(requestData));
             return false;
         }
     }
@@ -116,16 +120,23 @@ function createServer (logger, options) {
     return result;
 }
 
+/**
+ * Initializes the tcp protocol
+ * @param {boolean} allowInjection - The --allowInjection command line parameter
+ * @param {boolean} recordRequests - The --mock command line parameter
+ * @param {boolean} debug - The --debug command line parameter
+ * @returns {Object} - The protocol implementation
+ */
 function initialize (allowInjection, recordRequests, debug) {
     var implementation = {
-            protocolName: 'tcp',
-            createServer: createServer,
-            Request: TcpRequest
-        };
+        protocolName: 'tcp',
+        createServer: createServer,
+        Request: TcpRequest
+    };
 
     return {
         name: implementation.protocolName,
-        create: AbstractServer.implement(implementation, recordRequests, debug, logger).create,
+        create: AbstractServer.implement(implementation, recordRequests, debug, winston).create,
         Validator: { create: combinators.curry(TcpValidator.create, allowInjection) }
     };
 }

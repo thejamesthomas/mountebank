@@ -1,12 +1,28 @@
 'use strict';
 
+/**
+ * Validating a syntactically correct imposter creation statically is quite difficult.
+ * This module validates dynamically by running test requests through each predicate and each stub
+ * to see if it throws an error.  A valid request is one that passes the dry run error-free.
+ * @module
+ */
+
 var utils = require('util'),
     Q = require('q'),
     exceptions = require('../util/errors'),
     helpers = require('../util/helpers'),
     combinators = require('../util/combinators'),
-    StubResolver = require('./stubResolver');
+    ResponseResolver = require('./responseResolver');
 
+/**
+ * Creates the validator
+ * @param {Object} options - Configuration for the validator
+ * @param {Object} options.testRequest - The protocol-specific request used for each dry run
+ * @param {Object} options.StubRepository - The creation function
+ * @param {boolean} options.allowInjection - Whether JavaScript injection is allowed or not
+ * @param {function} options.additionalValidation - A function that performs protocol-specific validation
+ * @returns {Object}
+ */
 function create (options) {
 
     function stubForResponse (originalStub, response, withPredicates) {
@@ -39,7 +55,7 @@ function create (options) {
                 warn: combinators.noop,
                 error: logger.error
             },
-            resolver = StubResolver.create(dryRunProxy, combinators.identity),
+            resolver = ResponseResolver.create(dryRunProxy, combinators.identity),
             stubsToValidateWithPredicates = stub.responses.map(function (response) {
                 return stubForResponse(stub, response, true);
             }),
@@ -52,10 +68,6 @@ function create (options) {
                 stubRepository.addStub(stubToValidate);
                 return stubRepository;
             });
-
-        if (hasStubInjection(stub)) {
-            logger.warn('dry running injection, use the isDryRun request field in your JavaScript to ignore...');
-        }
 
         return Q.all(dryRunRepositories.map(function (stubRepository) {
             var testRequest = options.testRequest;
@@ -156,6 +168,13 @@ function create (options) {
         return errors;
     }
 
+    /**
+     * Validates that the imposter creation is syntactically valid
+     * @memberOf module:models/dryRunValidator#
+     * @param {Object} request - The request containing the imposter definition
+     * @param {Object} logger - The logger
+     * @returns {Object} Promise resolving to an object containing isValid and an errors array
+     */
     function validate (request, logger) {
         var stubs = request.stubs || [],
             encoding = request.mode === 'binary' ? 'base64' : 'utf8',

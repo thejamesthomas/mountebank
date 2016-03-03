@@ -16,17 +16,18 @@ var assert = require('assert'),
 describe('mb command line', function () {
     if (isWindows) {
         // slower process startup time because Windows
-        this.timeout(timeout*2);
+        this.timeout(timeout * 2);
     }
     else {
         this.timeout(timeout);
     }
 
-    // I normally separating the data needed for the assertions from the test setup,
+    // I normally advocated separating the data needed for the assertions from the test setup,
     // but I wanted this to be a reasonably complex regression test
     promiseIt('should support complex configuration with --configfile in multiple files', function () {
-        // Delay because we need to wait long enough for the imposters to be created
-        return mb.start(['--configfile', path.join(__dirname, 'imposters/imposters.ejs')]).delay(500).then(function () {
+        var args = ['--configfile', path.join(__dirname, 'imposters/imposters.ejs')];
+
+        return mb.start(args).then(function () {
             return http.post('/orders', '', 4545);
         }).then(function (response) {
             assert.strictEqual(response.statusCode, 201);
@@ -71,19 +72,21 @@ describe('mb command line', function () {
         });
     });
 
-    // This is the stub resolver injection example on /docs/api/injection
+    // This is the response resolver injection example on /docs/api/injection
     promiseIt('should evaluate stringify function in templates when loading configuration files', function () {
+        var args = ['--configfile', path.join(__dirname, 'templates/imposters.ejs'), '--allowInjection'];
+
         // Delay because we need to wait long enough for the imposters to be created
-        return mb.start(['--configfile', path.join(__dirname, 'templates/imposters.ejs'), '--allowInjection']).delay(500).then(function () {
+        return mb.start(args).then(function () {
             return http.get('/first', 4546);
         }).then(function (response) {
-            assert.deepEqual(response.body, { count: 3 });
+            assert.deepEqual(response.body, { count: 1 });
             return http.get('/second', 4546);
         }).then(function (response) {
-            assert.deepEqual(response.body, { count: 4 });
+            assert.deepEqual(response.body, { count: 2 });
             return http.get('/first', 4546);
         }).then(function (response) {
-            assert.deepEqual(response.body, { count: 3 });
+            assert.deepEqual(response.body, { count: 1 });
             return http.get('/counter', 4546);
         }).then(function (response) {
             assert.strictEqual(response.body, 'There have been 2 proxied calls');

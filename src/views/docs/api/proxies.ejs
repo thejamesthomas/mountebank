@@ -15,7 +15,7 @@ the fields which should be included in newly created <code>predicates</code>.  T
 <code>proxy</code> will ensure that the proxied request data for those fields are
 filled in.</p>
 
-<p><code>proxy</code> resolvers take the following parameters:</p>
+<p><code>proxy</code> response types take the following parameters:</p>
 
 <table>
   <tr>
@@ -27,8 +27,7 @@ filled in.</p>
   <tr>
     <td><code>to</code></td>
     <td>required</td>
-    <td>For http and http imposters, a string.  For tcp imposters, an object
-    containing a <code>host</code> string and <code>port</code> integer.</td>
+    <td>A URL without the path (e.g. http://someserver:3000 or tcp://someserver:3000)</td>
     <td>Defines the origin server that the stub should proxy to.</td>
   </tr>
   <tr>
@@ -75,6 +74,10 @@ origin server expects to use mutual authentication and will request a client cer
     <td>The SSL client private key</td>
   </tr>
 </table>
+
+<p>It is occasionally useful to capture how long the original proxied request takes.  mountebank
+stores the number of milliseconds for the request in the <code>_proxyResponseTime</code> field in the
+response.</p>
 
 <h2>Understanding proxy behavior</h2>
 
@@ -153,7 +156,7 @@ newly created stub will match, and the recorded response will be replayed.  If
 the imposter receives a <code>GET /test?q=mountebank&amp;sort=descending</code>, then
 it will proxy again, creating a new stub, because the querystring is different.</p>
 
-<p>A <code>proxyAlways</code> resolver saves stubs behind the <code>proxy</code>
+<p>The <code>proxyAlways</code> mode saves stubs behind the <code>proxy</code>
 stub.  This allows you to record a richer set of interactions with the origin server,
 but requires you to save off the imposter representation and remove or reorder the
 <code>proxy</code> to replay those interactions.</p>

@@ -1,5 +1,7 @@
 'use strict';
 
+/** @module */
+
 var inherit = require('./inherit');
 
 function wrap (wrappedLogger, logger) {
@@ -11,22 +13,28 @@ function wrap (wrappedLogger, logger) {
         };
     });
 }
-function create (logger, scope) {
 
+/**
+ * Returns a logger that prefixes each message of the given logger with a given scope
+ * @param {Object} logger - The logger to add a scope to
+ * @param {string} scope - The prefix for all log messages
+ * @returns {Object}
+ */
+function create (logger, scope) {
     function formatScope (scopeText) {
         return scopeText.indexOf('[') === 0 ? scopeText : '[' + scopeText + '] ';
     }
 
     var wrappedLogger = inherit.from(logger, {
-            scopePrefix: formatScope(scope),
-            withScope: function (nestedScopePrefix) {
-                return create(logger, wrappedLogger.scopePrefix + nestedScopePrefix + ' ');
-            },
-            changeScope: function (newScope) {
-                wrappedLogger.scopePrefix = formatScope(newScope);
-                wrap(wrappedLogger, logger);
-            }
-        });
+        scopePrefix: formatScope(scope),
+        withScope: function (nestedScopePrefix) {
+            return create(logger, wrappedLogger.scopePrefix + nestedScopePrefix + ' ');
+        },
+        changeScope: function (newScope) {
+            wrappedLogger.scopePrefix = formatScope(newScope);
+            wrap(wrappedLogger, logger);
+        }
+    });
 
     wrap(wrappedLogger, logger);
     return wrappedLogger;

@@ -28,7 +28,6 @@ function getAttribute (element, attributeName) {
 }
 
 function addStep (test, stepSpec) {
-    /* jshint maxcomplexity: 8 */
     var stepIndex = (stepSpec.stepId || stepSpec.verifyStepId || 0) - 1;
 
     if (stepIndex < 0) {
@@ -84,7 +83,7 @@ function get (endpoint) {
         var elements = window.document.getElementsByTagName('code'),
             tests = {};
 
-        for (var i = 0; i < elements.length; i++) {
+        for (var i = 0; i < elements.length; i += 1) {
             var element = elements[i],
                 testId = getAttribute(element, 'data-test-id'),
                 testSpec = {

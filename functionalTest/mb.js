@@ -1,47 +1,62 @@
 'use strict';
 
 var Q = require('q'),
+    fs = require('fs'),
     path = require('path'),
     spawn = require('child_process').spawn,
     exec = require('child_process').exec,
     httpClient = require('./api/http/baseHttpClient').create('http'),
     headers = { connection: 'close' },
     isWindows = require('os').platform().indexOf('win') === 0,
-    mbPath = process.env.MB_EXECUTABLE || path.normalize(__dirname + '/../bin/mb'),
-    pidfile = 'test.pid';
+    mbPath = process.env.MB_EXECUTABLE || path.join(__dirname, '/../bin/mb'),
+    pidfile = 'test.pid',
+    logfile = 'mb-test.log';
+
+function whenFullyInitialized (callback) {
+    var spinWait = function () {
+        if (fs.existsSync(pidfile)) {
+            callback({});
+        }
+        else {
+            Q.delay(100).done(spinWait);
+        }
+    };
+
+    if (fs.existsSync(pidfile)) {
+        fs.unlinkSync(pidfile);
+    }
+    spinWait();
+}
 
 function create (port) {
 
     function start (args) {
         var deferred = Q.defer(),
-            mbArgs = ['restart', '--port', port, '--pidfile', pidfile].concat(args || []),
+            command = mbPath,
+            mbArgs = [
+                'restart',
+                '--port', port,
+                '--pidfile', pidfile,
+                '--logfile', logfile
+            ].concat(args || []),
             mb;
 
         if (isWindows) {
             mbArgs.unshift(mbPath);
 
             if (mbPath.indexOf('.cmd') >= 0) {
+                // Accommodate the self-contained Windows zip files that ship with mountebank
                 mbArgs.unshift('/c');
-                mb = spawn('cmd', mbArgs);
+                command = 'cmd';
             }
             else {
-                mb = spawn('node', mbArgs);
+                command = 'node';
             }
-        }
-        else {
-            mb = spawn(mbPath, mbArgs);
         }
 
+        whenFullyInitialized(deferred.resolve);
+        mb = spawn(command, mbArgs);
         mb.on('error', deferred.reject);
-        mb.stderr.on('data', function (data) {
-            console.error(data.toString('utf8'));
-        });
-        mb.stdout.on('data', function (data) {
-            // Looking for "mountebank va.b.c (node vx.y.z) now taking orders..."
-            if (data.toString('utf8').indexOf('now taking orders') > 0) {
-                deferred.resolve();
-            }
-        });
 
         return deferred.promise;
     }
@@ -53,7 +68,11 @@ function create (port) {
         if (isWindows && mbPath.indexOf('.cmd') < 0) {
             command = 'node ' + command;
         }
-        exec(command, function () {
+        exec(command, function (error, stdout, stderr) {
+            if (error) { throw error; }
+            if (stdout) { console.log(stdout); }
+            if (stderr) { console.error(stderr); }
+
             // Prevent address in use errors on the next start
             setTimeout(deferred.resolve, isWindows ? 1000 : 250);
         });
@@ -64,12 +83,12 @@ function create (port) {
     // After trial and error, I discovered that we have to set
     // the connection: close header on Windows or we end up with
     // ECONNRESET errors
-    function get (path) {
-        return httpClient.responseFor({ method: 'GET', path: path, port: port, headers: headers });
+    function get (endpoint) {
+        return httpClient.responseFor({ method: 'GET', path: endpoint, port: port, headers: headers });
     }
 
-    function post (path, body) {
-        return httpClient.responseFor({ method: 'POST', path: path, port: port, body: body, headers: headers });
+    function post (endpoint, body) {
+        return httpClient.responseFor({ method: 'POST', path: endpoint, port: port, body: body, headers: headers });
     }
 
     return {

@@ -1,8 +1,10 @@
 'use strict';
 
 var run = require('./run').run,
-    deploy = process.env.MB_DEPLOY || false,
-    publish = process.env.MB_PUBLISH || false;
+    deploy = process.env.MB_DEPLOY === 'true',
+    publish = process.env.MB_PUBLISH === 'true',
+    thisPackage = require('../package.json'),
+    version = process.env.MB_VERSION || thisPackage.version;
 
 module.exports = function (grunt) {
 
@@ -33,6 +35,14 @@ module.exports = function (grunt) {
             return;
         }
 
-        run('scripts/deploy/deployNpm', [publish]).done(this.async(), failTask('deploy:npm'));
+        run('scripts/deploy/deployNpm', []).done(this.async(), failTask('deploy:npm'));
+    });
+
+    grunt.registerTask('deploy:docs', 'Deploy source docs to BitBalloon', function () {
+        if (!deploy) {
+            return;
+        }
+
+        run('scripts/deploy/deployFirebase', [version]).done(this.async(), failTask('deploy:docs'));
     });
 };

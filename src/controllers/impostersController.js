@@ -1,10 +1,23 @@
 'use strict';
 
+/**
+ * The controller that manages the list of imposters
+ * @module
+ */
+
 var Q = require('q'),
     helpers = require('../util/helpers'),
     exceptions = require('../util/errors'),
     url = require('url');
 
+/**
+ * Creates the imposters controller
+ * @param {Object} protocols - the protocol implementations supported by mountebank
+ * @param {Object} imposters - The map of ports to imposters
+ * @param {Object} Imposter - The factory for creating new imposters
+ * @param {Object} logger - The logger
+ * @returns {{get: get, post: post, del: del, put: put}}
+ */
 function create (protocols, imposters, Imposter, logger) {
 
     function queryIsFalse (query, key) {
@@ -49,7 +62,7 @@ function create (protocols, imposters, Imposter, logger) {
         }
     }
 
-    function validate (request, logger) {
+    function validate (request) {
         var errors = [],
             valid = Q({ isValid: false, errors: errors });
 
@@ -76,6 +89,12 @@ function create (protocols, imposters, Imposter, logger) {
         response.send({ errors: [error] });
     }
 
+    /**
+     * The function responding to GET /imposters
+     * @memberOf module:controllers/impostersController#
+     * @param {Object} request - the HTTP request
+     * @param {Object} response - the HTTP response
+     */
     function get (request, response) {
         response.format({
             json: function () {
@@ -101,9 +120,16 @@ function create (protocols, imposters, Imposter, logger) {
         });
     }
 
+    /**
+     * The function responding to POST /imposters
+     * @memberOf module:controllers/impostersController#
+     * @param {Object} request - the HTTP request
+     * @param {Object} response - the HTTP response
+     * @returns {Object} A promise for testing purposes
+     */
     function post (request, response) {
         var protocol = request.body.protocol,
-            validationPromise = validate(request.body, logger);
+            validationPromise = validate(request.body);
 
         logger.debug(helpers.socketName(request.socket) + ' => ' + JSON.stringify(request.body));
 
@@ -124,6 +150,13 @@ function create (protocols, imposters, Imposter, logger) {
         });
     }
 
+    /**
+     * The function responding to DELETE /imposters
+     * @memberOf module:controllers/impostersController#
+     * @param {Object} request - the HTTP request
+     * @param {Object} response - the HTTP response
+     * @returns {Object} A promise for testing purposes
+     */
     function del (request, response) {
         var query = url.parse(request.url, true).query,
             options = {
@@ -133,12 +166,19 @@ function create (protocols, imposters, Imposter, logger) {
             },
             json = Object.keys(imposters).reduce(function (accumulator, id) {
                 return accumulator.concat(imposters[id].toJSON(options));
-             }, []);
+            }, []);
         return deleteAllImposters().then(function () {
             response.send({ imposters: json });
         });
     }
 
+    /**
+     * The function responding to PUT /imposters
+     * @memberOf module:controllers/impostersController#
+     * @param {Object} request - the HTTP request
+     * @param {Object} response - the HTTP response
+     * @returns {Object} A promise for testing purposes
+     */
     function put (request, response) {
         var requestImposters = request.body.imposters || [],
             validationPromises = requestImposters.map(function (imposter) {
@@ -148,9 +188,9 @@ function create (protocols, imposters, Imposter, logger) {
         logger.debug(helpers.socketName(request.socket) + ' => ' + JSON.stringify(request.body));
 
         return Q.all(validationPromises).then(function (validations) {
-            var isValid =  validations.every(function (validation) {
-                    return validation.isValid;
-                });
+            var isValid = validations.every(function (validation) {
+                return validation.isValid;
+            });
 
             if (isValid) {
                 return deleteAllImposters().then(function () {
@@ -173,8 +213,8 @@ function create (protocols, imposters, Imposter, logger) {
             }
             else {
                 var validationErrors = validations.reduce(function (accumulator, validation) {
-                        return accumulator.concat(validation.errors);
-                    }, []);
+                    return accumulator.concat(validation.errors);
+                }, []);
 
                 respondWithValidationErrors(response, validationErrors);
             }

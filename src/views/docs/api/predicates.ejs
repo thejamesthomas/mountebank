@@ -71,7 +71,7 @@ predicate operators are allowed:</p>
   </tr>
 </table>
 
-<p>Predicates can be parameterized.  At the moment, mountebank accepts the following
+<p>Predicates can be parameterized.  mountebank accepts the following
 predicate parameters:</p>
 
 <table>
@@ -92,9 +92,16 @@ predicate parameters:</p>
     <td>Defines a regular expression that is stripped out of the request field
     before matching.</td>
   </tr>
+  <tr>
+    <td><code>xpath</code></td>
+    <td><code>null</code></td>
+    <td>Defines an object containing a <code>selector</code> string and, optionally, an
+    <code>ns</code> object field that defines a namespace map.</td>
+  </tr>
 </table>
 
-<p>See the <code>equals</code> example below to see the parameters in action.</p>
+<p>See the <code>equals</code> example below to see the <code>caseSensitive</code> and
+<code>except</code> parameters in action.</p>
 
 <p>Almost all predicates are scoped to a request field; see the protocol pages linked to from
 the sidebar to see the request fields.  <code>inject</code> is the sole exception.  It takes
@@ -113,9 +120,19 @@ imposters, as even binary RPC data generally contains strings representing metho
 
 <p>On occasion you may encounter multi-valued keys.  This can be the case with querystrings
 that have repeating keys, for example <code>?key=first&amp;key=second</code>.  In those cases,
-<code>deepEquals</code> will require all the values in the same order to match.  All other
+<code>deepEquals</code> will require all the values (in any order) to match.  All other
 predicates will match if any value matches, so an <code>equals</code> predicate
 will match with the value of <code>second</code> in the example above.</p>
+
+<h2>Matching XML or JSON</h2>
+
+<p>mountebank has special support for matching XML and JSON request fields, such as in an <code>http body</code>
+or <code>tcp data</code> field.  Where XML or JSON predicates are used against <code>string</code> fields,
+mountebank will attempt to parse the field as XML or JSON and apply the given predicate.  If he is unable to
+parse the field, the predicate will fail; otherwise it will pass or fail according to the selected value.</p>
+
+<p>See the <a href='/docs/api/xpath'>xpath page</a> for <code>xpath</code> examples.</p>
+<p>See the <a href='/docs/api/json'>json page</a> for <code>json</code> examples.</p>
 
 <h2>Examples</h2>
 

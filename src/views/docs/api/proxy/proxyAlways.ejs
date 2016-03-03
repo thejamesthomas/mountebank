@@ -56,7 +56,7 @@ Transfer-Encoding: chunked
 call 4
 </code></pre>
 
-<p>We'll make the same request.  Unlike a <code>proxyOnce</code> resolver,
+<p>We'll make the same request.  Unlike the <code>proxyOnce</code> mode,
 this request will still be proxied:</p>
 
 <pre><code data-test-id='proxy example'
@@ -121,10 +121,10 @@ Accept: application/json
 
 <code class='hidden' data-test-id='proxy example'
                      data-test-verify-step='13'
-                     data-test-ignore-lines='["[Dd]ate"]'>
+                     data-test-ignore-lines='["[Dd]ate", "_proxyResponseTime", "Content-Length"]'>
 HTTP/1.1 200 OK
 Content-Type: application/json; charset=utf-8
-Content-Length: 1768
+Content-Length: 1879
 Date: Mon, 27 Jan 2014 04:38:44 GMT
 Connection: keep-alive
 
@@ -158,24 +158,26 @@ Connection: keep-alive
           "is": {
             "statusCode": 200,
             "headers": {
-              "connection": "close",
-              "date": "Mon, 27 Jan 2014 04:38:44 GMT",
-              "transfer-encoding": "chunked"
+              "Connection": "close",
+              "Date": "Mon, 27 Jan 2014 04:38:44 GMT",
+              "Transfer-Encoding": "chunked"
             },
             "body": "call 4",
-            "_mode": "text"
+            "_mode": "text",
+            "_proxyResponseTime": 2
           }
         },
         {
           "is": {
             "statusCode": 200,
             "headers": {
-              "connection": "close",
-              "date": "Mon, 27 Jan 2014 04:38:44 GMT",
-              "transfer-encoding": "chunked"
+              "Connection": "close",
+              "Date": "Mon, 27 Jan 2014 04:38:44 GMT",
+              "Transfer-Encoding": "chunked"
             },
             "body": "call 5",
-            "_mode": "text"
+            "_mode": "text",
+            "_proxyResponseTime": 2
           }
         }
       ]
@@ -205,12 +207,13 @@ Connection: keep-alive
           "is": {
             "statusCode": 200,
             "headers": {
-              "connection": "close",
-              "date": "Mon, 27 Jan 2014 04:38:44 GMT",
-              "transfer-encoding": "chunked"
+              "Connection": "close",
+              "Date": "Mon, 27 Jan 2014 04:38:44 GMT",
+              "Transfer-Encoding": "chunked"
             },
             "body": "call 6",
-            "_mode": "text"
+            "_mode": "text",
+            "_proxyResponseTime": 2
           }
         }
       ]
@@ -261,9 +264,9 @@ Content-Type: application/json
           "is": {
             "statusCode": 200,
             "headers": {
-              "connection": "close",
-              "date": "Mon, 27 Jan 2014 04:38:44 GMT",
-              "transfer-encoding": "chunked"
+              "Connection": "close",
+              "Date": "Mon, 27 Jan 2014 04:38:44 GMT",
+              "Transfer-Encoding": "chunked"
             },
             "body": "call 4"
           }
@@ -272,9 +275,9 @@ Content-Type: application/json
           "is": {
             "statusCode": 200,
             "headers": {
-              "connection": "close",
-              "date": "Mon, 27 Jan 2014 04:38:44 GMT",
-              "transfer-encoding": "chunked"
+              "Connection": "close",
+              "Date": "Mon, 27 Jan 2014 04:38:44 GMT",
+              "Transfer-Encoding": "chunked"
             },
             "body": "call 5"
           }
@@ -306,9 +309,9 @@ Content-Type: application/json
           "is": {
             "statusCode": 200,
             "headers": {
-              "connection": "close",
-              "date": "Mon, 27 Jan 2014 04:38:44 GMT",
-              "transfer-encoding": "chunked"
+              "Connection": "close",
+              "Date": "Mon, 27 Jan 2014 04:38:44 GMT",
+              "Transfer-Encoding": "chunked"
             },
             "body": "call 6"
           }

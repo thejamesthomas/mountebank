@@ -1,10 +1,14 @@
 'use strict';
 
+/**
+ * Transforms an SMTP request into the simplified API-friendly mountebank request
+ * @module
+ */
+
 var Q = require('q'),
     Parser = require('mailparser').MailParser;
 
 function transform (request, email) {
-    /* jshint maxcomplexity: 7 */
     return {
         requestFrom: request.remoteAddress,
         envelopeFrom: request.from,
@@ -23,6 +27,11 @@ function transform (request, email) {
     };
 }
 
+/**
+ * Transforms the raw SMTP request into the mountebank request
+ * @param {Object} request - The raw SMTP request
+ * @returns {Object}
+ */
 function createFrom (request) {
     var deferred = Q.defer(),
         parser = new Parser();

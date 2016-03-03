@@ -1,5 +1,10 @@
 'use strict';
 
+/**
+ * Error types returned by the API
+ * @module
+ */
+
 var inherit = require('./inherit'),
     helpers = require('./helpers');
 
