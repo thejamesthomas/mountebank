@@ -10,6 +10,7 @@ At the moment, the following protocols are supported:
 * https
 * tcp (text and binary)
 * smtp
+* sms
 
 mountebank supports mock verification, stubbing with advanced predicates, JavaScript injection,
 and record-playback through proxying.
